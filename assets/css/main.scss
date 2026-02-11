@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-royal-950 text-royal-100;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medieval;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-royal-800/50 backdrop-blur-lg border border-gold-500/20 rounded-2xl;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600
+           hover:from-gold-600 hover:to-gold-700 text-royal-950 font-medium
+           rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-gold-500/50;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gradient-to-r from-royal-600 to-royal-700
+           hover:from-royal-500 hover:to-royal-600 text-royal-100 font-medium
+           rounded-lg transition-all duration-200 border border-royal-500;
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 bg-gradient-to-r from-red-600 to-red-700
+           hover:from-red-500 hover:to-red-600 text-white font-medium
+           rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-red-500/50;
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+  }
+}

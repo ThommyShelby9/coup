@@ -1,0 +1,44 @@
+{
+  "name": "coup-digital",
+  "version": "1.0.0",
+  "description": "Jeu de cartes Coup digital en temps réel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:nuxt\" \"npm run dev:socket\" --names \"NUXT,SOCKET\" --prefix-colors \"cyan,magenta\"",
+    "dev:nuxt": "nuxt dev",
+    "dev:socket": "tsx socket-server-integrated.ts",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.2",
+    "@pinia/nuxt": "^0.5.5",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "gsap": "^3.12.5",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-vue-next": "^0.460.0",
+    "mongoose": "^8.8.4",
+    "nuxt": "^3.15.1",
+    "nuxt-socket-io": "^3.0.13",
+    "pinia": "^2.2.8",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "three": "^0.171.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.10.5",
+    "@types/three": "^0.171.0",
+    "concurrently": "^9.2.1",
+    "sass": "^1.83.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.2",
+    "vue-tsc": "^2.2.12"
+  }
+}
