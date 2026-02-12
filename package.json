@@ -4,6 +4,10 @@
   "description": "Jeu de cartes Coup digital en temps réel",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:nuxt\" \"npm run dev:socket\" --names \"NUXT,SOCKET\" --prefix-colors \"cyan,magenta\"",
     "dev:nuxt": "nuxt dev",
