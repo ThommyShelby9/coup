@@ -15,7 +15,8 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "prepare": "nuxt prepare",
+    "postinstall": "echo 'Skipping postinstall in production'"
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "6.8.0",
