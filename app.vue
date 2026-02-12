@@ -4,12 +4,6 @@
       <NuxtPage />
     </NuxtLayout>
 
-    <!-- Composants PWA -->
-    <ClientOnly>
-      <InstallPrompt />
-      <UpdatePrompt />
-      <OfflineBanner />
-    </ClientOnly>
   </div>
 </template>
 
