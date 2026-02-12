@@ -25,8 +25,8 @@ export default defineNitroPlugin((nitroApp) => {
         methods: ['GET', 'POST']
       },
       path: '/socket.io/',
-      transports: ['polling', 'websocket'],
-      allowUpgrades: true,
+      transports: ['polling'],
+      allowUpgrades: false,
       pingTimeout: 60000,
       pingInterval: 25000
     })

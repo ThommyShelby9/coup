@@ -14,7 +14,7 @@ export const useSocket = () => {
       : 'http://localhost:3000'
 
     socket.value = io(socketUrl, {
-      transports: ['polling', 'websocket'],
+      transports: ['polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000
