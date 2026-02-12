@@ -93,7 +93,6 @@ const handleClick = () => {
 .card-3d {
   width: 180px;
   height: 260px;
-  perspective: 1000px;
   cursor: default;
   position: relative;
 }
@@ -103,7 +102,7 @@ const handleClick = () => {
 }
 
 .card-interactive:hover .card-inner {
-  transform: rotateY(10deg) rotateX(-8deg) translateZ(30px) scale(1.05);
+  transform: perspective(800px) rotateY(10deg) rotateX(-8deg) translateZ(30px) scale(1.05);
   filter: brightness(1.2);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -126,7 +125,7 @@ const handleClick = () => {
 }
 
 .card-selected .card-inner {
-  transform: scale(1.1) translateY(-10px);
+  transform: perspective(800px) scale(1.1) translateY(-10px);
   box-shadow:
     0 0 30px rgba(251, 191, 36, 0.65),
     0 0 50px rgba(251, 191, 36, 0.4);
@@ -135,10 +134,10 @@ const handleClick = () => {
 
 @keyframes card-selected-pulse {
   0%, 100% {
-    transform: scale(1.1) translateY(-10px);
+    transform: perspective(800px) scale(1.1) translateY(-10px);
   }
   50% {
-    transform: scale(1.12) translateY(-12px);
+    transform: perspective(800px) scale(1.12) translateY(-12px);
   }
 }
 
@@ -160,11 +159,12 @@ const handleClick = () => {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  transform: perspective(800px) rotateY(0deg);
   transition: transform 0.6s ease;
 }
 
 .card-flipped {
-  transform: rotateY(180deg);
+  transform: perspective(800px) rotateY(180deg);
 }
 
 .card-face {
@@ -177,7 +177,6 @@ const handleClick = () => {
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(251, 191, 36, 0.2);
-  transition: all 0.4s ease;
 }
 
 .card-front {
