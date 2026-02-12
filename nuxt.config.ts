@@ -44,9 +44,6 @@ export default defineNuxtConfig({
     plugins: ['~/server/plugins/socket.ts'],
     experimental: {
       websocket: true
-    },
-    externals: {
-      external: ['socket.io', 'engine.io', 'ws', 'jsonwebtoken']
     }
   },
 
@@ -80,6 +77,13 @@ export default defineNuxtConfig({
     '/_nuxt/**': {
       headers: {
         'cache-control': 'public, max-age=31536000, immutable'
+      }
+    },
+    '/**': {
+      headers: {
+        'cache-control': 'no-cache, no-store, must-revalidate',
+        'pragma': 'no-cache',
+        'expires': '0'
       }
     }
   },
