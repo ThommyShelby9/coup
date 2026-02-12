@@ -109,6 +109,7 @@ export default defineNuxtConfig({
     workbox: {
       navigateFallback: '/',
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
+      globDirectory: '.output/public',
 
       runtimeCaching: [
         {
@@ -157,9 +158,10 @@ export default defineNuxtConfig({
       type: 'module'
     },
 
-    // Désactiver les meta tags auto-générés pour éviter les doublons
+    // Configuration pour la génération du manifest
     injectManifest: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+      globDirectory: '.output/public'
     }
   },
 
