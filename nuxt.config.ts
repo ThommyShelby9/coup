@@ -107,9 +107,12 @@ export default defineNuxtConfig({
     },
 
     workbox: {
-      navigateFallback: '/',
+      // Pas de navigateFallback en mode SSR (les pages sont rendues côté serveur)
+      navigateFallback: undefined,
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
-      globDirectory: '.output/public',
+      cleanupOutdatedCaches: true,
+      skipWaiting: true,
+      clientsClaim: true,
 
       runtimeCaching: [
         {
@@ -120,6 +123,17 @@ export default defineNuxtConfig({
             expiration: {
               maxEntries: 10,
               maxAgeSeconds: 60 * 60 * 24 * 365
+            }
+          }
+        },
+        {
+          urlPattern: /\/_nuxt\/.+\.(js|css)$/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-assets-cache',
+            expiration: {
+              maxEntries: 200,
+              maxAgeSeconds: 60 * 60 * 24 * 30
             }
           }
         },
@@ -156,12 +170,6 @@ export default defineNuxtConfig({
     devOptions: {
       enabled: true,
       type: 'module'
-    },
-
-    // Configuration pour la génération du manifest
-    injectManifest: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-      globDirectory: '.output/public'
     }
   },
 
