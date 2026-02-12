@@ -12,7 +12,7 @@
     "dev": "concurrently \"npm run dev:nuxt\" \"npm run dev:socket\" --names \"NUXT,SOCKET\" --prefix-colors \"cyan,magenta\"",
     "dev:nuxt": "nuxt dev",
     "dev:socket": "tsx socket-server-integrated.ts",
-    "build": "nuxt build --dotenv .env",
+    "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
