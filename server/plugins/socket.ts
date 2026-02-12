@@ -25,7 +25,10 @@ export default defineNitroPlugin((nitroApp) => {
         methods: ['GET', 'POST']
       },
       path: '/socket.io/',
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket'],
+      allowUpgrades: true,
+      pingTimeout: 60000,
+      pingInterval: 25000
     })
 
     // Enregistrer l'instance globalement pour les API routes
