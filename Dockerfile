@@ -4,16 +4,22 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Copier package.json ET package-lock.json pour des builds deterministes
-COPY package.json package-lock.json ./
+# Copier package.json uniquement (pas le lockfile Windows qui manque les binaires Linux)
+COPY package.json ./
 
-# Installer les dependances avec ci pour respecter le lockfile
-RUN npm ci --no-audit --no-fund
+# Installer les dependances - npm install resout les bons binaires natifs pour Linux
+RUN npm install --no-audit --no-fund --ignore-scripts
+
+# Installer les binaires natifs rollup pour Linux musl
+RUN npm install @rollup/rollup-linux-x64-musl --no-save 2>/dev/null || true
+
+# Executer les scripts postinstall maintenant
+RUN npm run --if-present postinstall || true
 
 # Copier le code source
 COPY . .
 
-# Nettoyer tout ancien build avant de rebuilder
+# Nettoyer tout ancien build
 RUN rm -rf .output .nuxt
 
 # Build Nuxt
