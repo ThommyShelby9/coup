@@ -213,14 +213,18 @@
                 </button>
               </div>
               <div class="flex gap-4 justify-center">
-                <Card3D
+                <div
                   v-for="(card, index) in myCards"
                   :key="index"
-                  :card="card"
-                  :flipped="cardsHidden"
-                  :interactive="true"
-                  @click="toggleSingleCard(index)"
-                />
+                  class="cursor-pointer"
+                  @click="cardsHidden = !cardsHidden"
+                >
+                  <Card3D
+                    :card="card"
+                    :flipped="cardsHidden"
+                    :interactive="false"
+                  />
+                </div>
               </div>
             </div>
 
@@ -473,11 +477,6 @@ const myPlayer = computed(() => {
 
 const myCards = computed(() => myPlayer.value?.cards || [])
 const cardsHidden = ref(false)
-
-const toggleSingleCard = (_index: number) => {
-  // Clicking a card toggles all cards visibility
-  cardsHidden.value = !cardsHidden.value
-}
 
 const isMyTurn = computed(() => {
   if (!game.value || !authStore.user) return false

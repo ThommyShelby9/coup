@@ -232,11 +232,12 @@ export class GameService {
 
       // Le joueur révèle sa carte, la remet dans le deck et en pioche une nouvelle
       const cardIndex = player.cards.findIndex(c => c.type === action.claimedRole)
-      revealedCard = { ...player.cards[cardIndex] }
+      const cardData = player.cards[cardIndex]
+      revealedCard = { type: cardData.type, id: cardData.id }
       player.cards.splice(cardIndex, 1)
 
       // Remettre la carte révélée dans le deck et mélanger
-      game.deck.push(revealedCard)
+      game.deck.push({ type: revealedCard.type, id: revealedCard.id })
       game.deck = this.shuffleDeck(game.deck)
 
       // Piocher une nouvelle carte
