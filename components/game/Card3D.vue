@@ -160,7 +160,7 @@ const handleClick = () => {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.6s ease;
 }
 
 .card-flipped {
