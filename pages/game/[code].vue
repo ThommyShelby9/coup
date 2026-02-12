@@ -201,13 +201,25 @@
 
             <!-- My cards -->
             <div v-if="myCards.length > 0" class="glass-panel p-6">
-              <h3 class="font-medieval text-xl text-gold-400 mb-4">Vos cartes</h3>
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-medieval text-xl text-gold-400">Vos cartes</h3>
+                <button
+                  @click="cardsHidden = !cardsHidden"
+                  class="flex items-center gap-1 text-sm px-3 py-1 rounded-lg transition-colors"
+                  :class="cardsHidden ? 'bg-royal-700 text-royal-300 hover:bg-royal-600' : 'bg-gold-500/20 text-gold-400 hover:bg-gold-500/30'"
+                >
+                  <Icon :name="cardsHidden ? 'lucide:eye' : 'lucide:eye-off'" class="w-4 h-4" />
+                  <span>{{ cardsHidden ? 'Montrer' : 'Cacher' }}</span>
+                </button>
+              </div>
               <div class="flex gap-4 justify-center">
                 <Card3D
                   v-for="(card, index) in myCards"
                   :key="index"
                   :card="card"
-                  :interactive="false"
+                  :flipped="cardsHidden"
+                  :interactive="true"
+                  @click="toggleSingleCard(index)"
                 />
               </div>
             </div>
@@ -460,6 +472,12 @@ const myPlayer = computed(() => {
 })
 
 const myCards = computed(() => myPlayer.value?.cards || [])
+const cardsHidden = ref(false)
+
+const toggleSingleCard = (_index: number) => {
+  // Clicking a card toggles all cards visibility
+  cardsHidden.value = !cardsHidden.value
+}
 
 const isMyTurn = computed(() => {
   if (!game.value || !authStore.user) return false
