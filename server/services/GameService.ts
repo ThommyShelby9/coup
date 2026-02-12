@@ -173,61 +173,19 @@ export class GameService {
       throw new Error('Joueur non trouvé')
     }
 
-    // Exécuter l'action selon le type
-    switch (action.type) {
-      case 'income':
-        player.coins += 1
-        break
-
-      case 'foreign-aid':
-        player.coins += 2
-        break
-
-      case 'tax':
-        player.coins += 3
-        break
-
-      case 'coup':
-        if (action.target) {
-          player.coins -= 7
-          await this.eliminateCard(game, action.target.toString(), true)
-        }
-        break
-
-      case 'assassinate':
-        if (action.target) {
-          player.coins -= 3
-          await this.eliminateCard(game, action.target.toString(), true)
-        }
-        break
-
-      case 'steal':
-        if (action.target) {
-          const target = game.players.find(p => p.userId.toString() === action.target?.toString())
-          if (target) {
-            const stolen = Math.min(2, target.coins)
-            target.coins -= stolen
-            player.coins += stolen
-          }
-        }
-        break
-
-      case 'exchange':
-        // Piocher 2 cartes du deck
-        const drawnCards = [game.deck.pop()!, game.deck.pop()!]
-        // Le joueur doit choisir quelles cartes garder
-        // Pour l'instant, on retourne juste les cartes piochées
-        // TODO: Implémenter le choix des cartes
-        game.deck.push(...player.cards)
-        player.cards = drawnCards
-        break
-    }
+    // Appliquer l'effet de l'action
+    this.applyActionEffect(game, action, player)
 
     // Marquer l'action comme résolue
     action.resolved = true
 
     // Passer au joueur suivant
     this.nextTurn(game)
+
+    // Mettre à jour les stats si la partie est terminée
+    if (game.phase === 'ended') {
+      await this.updateEndGameStats(game)
+    }
 
     await game.save()
     return game
@@ -265,17 +223,19 @@ export class GameService {
     let eliminatedPlayer = null
 
     if (hasRole) {
-      // Le challenger perd une carte (le challenge a échoué)
+      // Le challenge a échoué - le joueur avait bien le rôle
       challengeSuccess = false
       eliminatedPlayer = challengerId
-      await this.eliminateCard(game, challengerId, true)
+
+      // Le challenger perd une carte
+      this.removeCard(game, challengerId)
 
       // Le joueur révèle sa carte, la remet dans le deck et en pioche une nouvelle
       const cardIndex = player.cards.findIndex(c => c.type === action.claimedRole)
-      revealedCard = player.cards[cardIndex]
+      revealedCard = { ...player.cards[cardIndex] }
       player.cards.splice(cardIndex, 1)
 
-      // Remettre la carte dans le deck et mélanger
+      // Remettre la carte révélée dans le deck et mélanger
       game.deck.push(revealedCard)
       game.deck = this.shuffleDeck(game.deck)
 
@@ -284,13 +244,17 @@ export class GameService {
         player.cards.push(game.deck.pop()!)
       }
 
-      // L'action continue
-      await this.resolveAction(gameId)
+      // L'action continue - résoudre inline (pas de re-fetch)
+      this.applyActionEffect(game, action, player)
+      action.resolved = true
+      this.nextTurn(game)
     } else {
-      // Le joueur actuel perd une carte (le challenge a réussi)
+      // Le challenge a réussi - le joueur bluffait
       challengeSuccess = true
       eliminatedPlayer = action.playerId.toString()
-      await this.eliminateCard(game, action.playerId.toString(), true)
+
+      // Le bluffeur perd une carte
+      this.removeCard(game, action.playerId.toString())
 
       // L'action est annulée, passer au tour suivant
       action.resolved = true
@@ -304,6 +268,81 @@ export class GameService {
       revealedCard,
       challengeSuccess,
       eliminatedPlayer
+    }
+  }
+
+  /**
+   * Applique l'effet d'une action (sans save ni nextTurn)
+   */
+  static applyActionEffect(game: any, action: any, player: any) {
+    switch (action.type) {
+      case 'income':
+        player.coins += 1
+        break
+
+      case 'foreign-aid':
+        player.coins += 2
+        break
+
+      case 'tax':
+        player.coins += 3
+        break
+
+      case 'coup':
+        if (action.target) {
+          player.coins -= 7
+          this.removeCard(game, action.target.toString())
+        }
+        break
+
+      case 'assassinate':
+        if (action.target) {
+          player.coins -= 3
+          this.removeCard(game, action.target.toString())
+        }
+        break
+
+      case 'steal':
+        if (action.target) {
+          const target = game.players.find((p: any) => p.userId.toString() === action.target?.toString())
+          if (target) {
+            const stolen = Math.min(2, target.coins)
+            target.coins -= stolen
+            player.coins += stolen
+          }
+        }
+        break
+
+      case 'exchange':
+        if (game.deck.length >= 2) {
+          const drawnCards = [game.deck.pop()!, game.deck.pop()!]
+          game.deck.push(...player.cards)
+          player.cards = drawnCards
+          game.deck = this.shuffleDeck(game.deck)
+        }
+        break
+    }
+  }
+
+  /**
+   * Retire une carte d'un joueur (inline, sans save)
+   */
+  static removeCard(game: any, playerId: string) {
+    const player = game.players.find((p: any) => p.userId.toString() === playerId)
+
+    if (!player || player.cards.length === 0) {
+      return
+    }
+
+    player.cards.shift()
+
+    if (player.cards.length === 0) {
+      player.isAlive = false
+
+      const alivePlayers = game.players.filter((p: any) => p.isAlive)
+      if (alivePlayers.length === 1) {
+        game.phase = 'ended'
+      }
     }
   }
 
@@ -358,46 +397,39 @@ export class GameService {
   }
 
   /**
-   * Élimine une carte d'un joueur
+   * Élimine une carte d'un joueur (legacy - utilise removeCard)
    */
   static async eliminateCard(game: any, playerId: string, chooseCard: boolean = false) {
-    const player = game.players.find((p: any) => p.userId.toString() === playerId)
+    this.removeCard(game, playerId)
 
-    if (!player || player.cards.length === 0) {
-      return
+    // Mettre à jour les stats si la partie est terminée
+    if (game.phase === 'ended') {
+      await this.updateEndGameStats(game)
     }
+  }
 
-    // Pour l'instant, éliminer la première carte
-    // TODO: Laisser le joueur choisir quelle carte révéler
-    const eliminatedCard = player.cards.shift()
+  /**
+   * Met à jour les stats de fin de partie
+   */
+  static async updateEndGameStats(game: any) {
+    const alivePlayers = game.players.filter((p: any) => p.isAlive)
+    if (alivePlayers.length !== 1) return
 
-    // Si le joueur n'a plus de cartes, il est éliminé
-    if (player.cards.length === 0) {
-      player.isAlive = false
+    const winner = alivePlayers[0]
+    try {
+      await User.findByIdAndUpdate(winner.userId, {
+        $inc: { 'stats.gamesPlayed': 1, 'stats.wins': 1 }
+      })
 
-      // Vérifier s'il ne reste qu'un seul joueur
-      const alivePlayers = game.players.filter((p: any) => p.isAlive)
-      if (alivePlayers.length === 1) {
-        game.phase = 'ended'
-
-        // Mettre à jour les stats du gagnant
-        const winner = alivePlayers[0]
-        await User.findByIdAndUpdate(winner.userId, {
-          $inc: {
-            'stats.gamesPlayed': 1,
-            'stats.wins': 1
-          }
-        })
-
-        // Mettre à jour les stats des perdants
-        game.players.forEach(async (p: any) => {
-          if (p.userId.toString() !== winner.userId.toString()) {
-            await User.findByIdAndUpdate(p.userId, {
-              $inc: { 'stats.gamesPlayed': 1 }
-            })
-          }
-        })
+      for (const p of game.players) {
+        if (p.userId.toString() !== winner.userId.toString()) {
+          await User.findByIdAndUpdate(p.userId, {
+            $inc: { 'stats.gamesPlayed': 1 }
+          })
+        }
       }
+    } catch (err) {
+      console.error('[STATS] Error updating end game stats:', err)
     }
   }
 
