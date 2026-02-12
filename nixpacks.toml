@@ -4,11 +4,13 @@ nixpkgsArchive = "ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7"
 
 [phases.install]
 cmds = [
-  "npm install --include=optional --force"
+  "npm ci --omit=optional || npm install --omit=optional"
 ]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = [
+  "npm run build"
+]
 
 [start]
 cmd = "node .output/server/index.mjs"

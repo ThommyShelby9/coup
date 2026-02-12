@@ -12,10 +12,10 @@
     "dev": "concurrently \"npm run dev:nuxt\" \"npm run dev:socket\" --names \"NUXT,SOCKET\" --prefix-colors \"cyan,magenta\"",
     "dev:nuxt": "nuxt dev",
     "dev:socket": "tsx socket-server-integrated.ts",
-    "build": "nuxt build",
+    "build": "nuxt prepare && nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "node -e \"if (process.env.NODE_ENV !== 'production') { require('child_process').execSync('nuxt prepare', {stdio: 'inherit'}) }\""
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.12.2",

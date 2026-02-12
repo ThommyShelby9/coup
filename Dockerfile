@@ -11,22 +11,24 @@ WORKDIR /app
 COPY package*.json ./
 COPY .npmrc ./
 
-# Installer les dépendances
-RUN npm ci --include=optional
+# Variables d'environnement pour le build
+ENV NODE_ENV=production
+
+# Installer les dépendances (skip optional dependencies qui causent problème)
+RUN npm ci --omit=optional || npm install --omit=optional
 
 # Copier le reste des fichiers
 COPY . .
 
-# Build l'application
+# Build l'application (nuxt prepare est dans le script build maintenant)
 RUN npm run build
 
 # Exposer le port
 EXPOSE 3000
 
-# Variables d'environnement par défaut
+# Variables d'environnement runtime
 ENV HOST=0.0.0.0
 ENV PORT=3000
-ENV NODE_ENV=production
 
 # Démarrer l'application
 CMD ["node", ".output/server/index.mjs"]
