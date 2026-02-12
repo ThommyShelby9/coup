@@ -226,6 +226,11 @@ export const useSocketService = () => {
     return () => socketService.off('player-replaced-by-bot', callback)
   }
 
+  const onTurnStarted = (callback: (data: any) => void) => {
+    socketService.onTurnStarted(callback)
+    return () => socketService.off('turn-started', callback)
+  }
+
   const onTurnTimeout = (callback: (data: any) => void) => {
     socketService.onTurnTimeout(callback)
     return () => socketService.off('turn-timeout', callback)
@@ -300,6 +305,7 @@ export const useSocketService = () => {
     onPlayerDisconnected,
     onPlayerReconnected,
     onPlayerReplacedByBot,
+    onTurnStarted,
     onTurnTimeout,
     onGameStateSync
   }

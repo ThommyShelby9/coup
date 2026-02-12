@@ -111,6 +111,9 @@ export class GameService {
       }
     }
 
+    // Reset skip count — the player acted in time
+    player.skipCount = 0
+
     // Créer l'action
     const action = {
       playerId: player.userId,
@@ -432,6 +435,60 @@ export class GameService {
     } catch (err) {
       console.error('[STATS] Error updating end game stats:', err)
     }
+  }
+
+  /**
+   * Skip the current player's turn (called by TurnTimer on timeout)
+   * Increments skipCount; eliminates the player after 3 skips.
+   */
+  static async skipTurn(gameId: string) {
+    const game = await Game.findById(gameId)
+
+    if (!game || game.phase !== 'playing') {
+      throw new Error('Partie non trouvée ou non en cours')
+    }
+
+    const player = game.players[game.currentPlayer]
+    if (!player || !player.isAlive) {
+      // Player already dead — just advance
+      this.nextTurn(game)
+      await game.save()
+      return game
+    }
+
+    // Increment skip count
+    player.skipCount = (player.skipCount || 0) + 1
+
+    // Record the skip in action history
+    const skipAction = {
+      playerId: player.userId,
+      type: 'skip' as const,
+      timestamp: new Date(),
+      contested: false,
+      resolved: true
+    }
+    game.actionHistory.push(skipAction)
+
+    // Eliminate after 3 consecutive skips
+    if (player.skipCount >= 3) {
+      // Remove all cards
+      player.cards = []
+      player.isAlive = false
+
+      const alivePlayers = game.players.filter((p: any) => p.isAlive)
+      if (alivePlayers.length <= 1) {
+        game.phase = 'ended'
+        await this.updateEndGameStats(game)
+      }
+    }
+
+    // Advance to next turn
+    if (game.phase === 'playing') {
+      this.nextTurn(game)
+    }
+
+    await game.save()
+    return game
   }
 
   /**

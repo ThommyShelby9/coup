@@ -129,10 +129,25 @@
               <NuxtLink to="/lobby" class="text-royal-300 hover:text-gold-400 transition-colors">
                 <Icon name="lucide:arrow-left" class="w-5 h-5" />
               </NuxtLink>
-              <div>
-                <span class="text-royal-300">Tour {{ game.turn }}</span>
-                <span class="mx-2 text-royal-600">•</span>
-                <span class="text-gold-400 font-medium">{{ currentPlayerName }} joue</span>
+              <div class="flex items-center gap-3">
+                <div>
+                  <span class="text-royal-300">Tour {{ game.turn }}</span>
+                  <span class="mx-2 text-royal-600">•</span>
+                  <span class="text-gold-400 font-medium">{{ currentPlayerName }} joue</span>
+                </div>
+                <div v-if="turnTimeLeft > 0" class="flex items-center gap-2">
+                  <div class="w-24 h-1.5 bg-royal-700 rounded-full overflow-hidden">
+                    <div
+                      class="h-full rounded-full transition-all duration-1000 ease-linear"
+                      :class="turnTimeLeft <= 10 ? 'bg-red-500' : turnTimeLeft <= 20 ? 'bg-yellow-500' : 'bg-emerald-500'"
+                      :style="{ width: `${(turnTimeLeft / turnTimeMax) * 100}%` }"
+                    />
+                  </div>
+                  <span
+                    class="text-sm font-mono min-w-[2ch] text-right"
+                    :class="turnTimeLeft <= 10 ? 'text-red-400' : 'text-royal-300'"
+                  >{{ turnTimeLeft }}s</span>
+                </div>
               </div>
             </div>
             <div class="text-royal-300">
@@ -418,6 +433,35 @@ const isLoading = ref(true)
 const isStarting = ref(false)
 const isAddingBot = ref(false)
 
+// Turn timer
+const turnTimeLeft = ref(0)
+const turnTimeMax = ref(30)
+let turnTimerInterval: ReturnType<typeof setInterval> | null = null
+
+const startTurnCountdown = (timePerTurn: number) => {
+  if (turnTimerInterval) {
+    clearInterval(turnTimerInterval)
+  }
+  turnTimeMax.value = timePerTurn
+  turnTimeLeft.value = timePerTurn
+  turnTimerInterval = setInterval(() => {
+    if (turnTimeLeft.value > 0) {
+      turnTimeLeft.value--
+    } else if (turnTimerInterval) {
+      clearInterval(turnTimerInterval)
+      turnTimerInterval = null
+    }
+  }, 1000)
+}
+
+const stopTurnCountdown = () => {
+  if (turnTimerInterval) {
+    clearInterval(turnTimerInterval)
+    turnTimerInterval = null
+  }
+  turnTimeLeft.value = 0
+}
+
 // Action labels for toasts
 const actionLabels: Record<string, string> = {
   'income': 'Income (+1 pièce)',
@@ -427,7 +471,8 @@ const actionLabels: Record<string, string> = {
   'assassinate': 'Assassinat',
   'steal': 'Vol',
   'exchange': 'Échange de cartes',
-  'block': 'Blocage'
+  'block': 'Blocage',
+  'skip': 'Tour passé (inactivité)'
 }
 const game = ref<Game | null>(null)
 const showTargetSelector = ref(false)
@@ -567,6 +612,17 @@ const loadGame = async () => {
   try {
     const data = await $fetch(`/api/game/${route.params.code}`)
     game.value = data.game
+
+    // Start/restart the countdown if the game is in playing phase
+    if (data.game?.phase === 'playing') {
+      const timePerTurn = data.game.settings?.timePerTurn || 30
+      // Only start if not already running (socket event is the primary source)
+      if (turnTimeLeft.value <= 0) {
+        startTurnCountdown(timePerTurn)
+      }
+    } else if (data.game?.phase === 'ended') {
+      stopTurnCountdown()
+    }
   } catch (error) {
     console.error('Error loading game:', error)
     navigateTo('/lobby')
@@ -871,6 +927,7 @@ onMounted(async () => {
     socket.onGameStarted(() => {
       console.log('Game started!')
       loadGame()
+      // Timer will start via turn-started event from server
       // Démarrer la surveillance des tours de bots
       botTurn.startBotTurnWatcher()
 
@@ -1032,6 +1089,7 @@ onMounted(async () => {
   socketUnsubscribers.push(
     socket.onGameEnded((data) => {
     console.log('Game ended:', data)
+    stopTurnCountdown()
 
     if (data.game) {
       game.value = data.game
@@ -1085,16 +1143,28 @@ onMounted(async () => {
   )
 
   socketUnsubscribers.push(
+    socket.onTurnStarted((data) => {
+      startTurnCountdown(data.timePerTurn || 30)
+    })
+  )
+
+  socketUnsubscribers.push(
     socket.onTurnTimeout((data) => {
       showToast(data.message, 'warning')
+      loadGame()
     })
   )
 
   socketUnsubscribers.push(
     socket.onGameStateSync((gameData) => {
       game.value = gameData
-      // Toast désactivé - trop fréquent, cause des layout shifts
-      // showToast('État du jeu synchronisé', 'success')
+      // Restart countdown on state sync (turn changed server-side)
+      if (gameData?.phase === 'playing') {
+        const timePerTurn = gameData.settings?.timePerTurn || 30
+        startTurnCountdown(timePerTurn)
+      } else if (gameData?.phase === 'ended') {
+        stopTurnCountdown()
+      }
     })
   )
 
@@ -1111,6 +1181,8 @@ onUnmounted(() => {
   // Désabonner tous les socket listeners
   socketUnsubscribers.forEach(unsub => unsub())
   socketUnsubscribers.length = 0
+
+  stopTurnCountdown()
 
   const gameCode = route.params.code as string
   socket.leaveGame(gameCode)

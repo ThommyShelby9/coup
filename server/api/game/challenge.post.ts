@@ -1,6 +1,7 @@
 import { emitToGame } from '~/server/socket-instance'
 import { requireAuth } from '~/server/utils/auth'
 import { GameService } from '~/server/services/GameService'
+import { TurnTimer } from '~/server/services/TurnTimer'
 import { Game } from '~/server/models/Game'
 
 export default defineEventHandler(async (event) => {
@@ -22,6 +23,14 @@ export default defineEventHandler(async (event) => {
 
     // Récupérer le code de la partie
     const game = await Game.findById(gameId)
+
+    // Restart the turn timer for the next player
+    if (game && game.phase === 'playing') {
+      const timePerTurn = game.settings?.timePerTurn || 30
+      TurnTimer.startTimer(gameId, game.code, timePerTurn)
+    } else if (game) {
+      TurnTimer.clearTimer(gameId)
+    }
 
     // Broadcast via Socket.IO
     if (game) {

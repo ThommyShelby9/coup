@@ -88,7 +88,8 @@ const getActionIcon = (type: string) => {
     assassinate: 'lucide:zap',
     steal: 'lucide:hand',
     exchange: 'lucide:refresh-cw',
-    block: 'lucide:shield'
+    block: 'lucide:shield',
+    skip: 'lucide:clock'
   }
   return icons[type] || 'lucide:circle'
 }
@@ -102,7 +103,8 @@ const getActionText = (action: Action) => {
     assassinate: 'a assassiné',
     steal: 'a volé',
     exchange: 'a échangé ses cartes',
-    block: 'a bloqué'
+    block: 'a bloqué',
+    skip: 'a passé son tour (inactivité)'
   }
 
   let text = texts[action.type] || action.type

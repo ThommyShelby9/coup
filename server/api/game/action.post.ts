@@ -1,5 +1,6 @@
 import { requireAuth } from '~/server/utils/auth'
 import { GameService } from '~/server/services/GameService'
+import { TurnTimer } from '~/server/services/TurnTimer'
 import { Game } from '~/server/models/Game'
 import { emitToGame } from '~/server/socket-instance'
 import type { ActionType, CardType } from '~/types'
@@ -29,6 +30,18 @@ export default defineEventHandler(async (event) => {
 
     // Récupérer le game complet pour le code
     const game = await Game.findById(gameId)
+
+    // Restart the turn timer only if the action was fully resolved (no challenge/block pending)
+    if (game && !result.needsResponse) {
+      if (game.phase === 'playing') {
+        const timePerTurn = game.settings?.timePerTurn || 30
+        TurnTimer.startTimer(gameId, game.code, timePerTurn)
+      } else if (game.phase === 'ended') {
+        TurnTimer.clearTimer(gameId)
+      }
+    }
+    // If the action needs response (challenge/block window), the timer keeps running
+    // and will auto-resolve when it expires (handled in TurnTimer)
 
     // Broadcast via Socket.IO aux autres joueurs
     if (game) {

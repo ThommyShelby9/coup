@@ -121,6 +121,10 @@ export interface PlayerReplacedByBotEvent {
   botName: string
 }
 
+export interface TurnStartedEvent {
+  timePerTurn: number
+}
+
 export interface TurnTimeoutEvent {
   playerId: string
   autoAction: string
@@ -518,6 +522,14 @@ class SocketService {
   onTurnTimeout(callback: (data: TurnTimeoutEvent) => void): void {
     this.socket?.on('turn-timeout', callback)
     this._trackListener('turn-timeout', callback)
+  }
+
+  /**
+   * Listen for turn started event (timer reset)
+   */
+  onTurnStarted(callback: (data: TurnStartedEvent) => void): void {
+    this.socket?.on('turn-started', callback)
+    this._trackListener('turn-started', callback)
   }
 
   /**

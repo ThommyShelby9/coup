@@ -1,6 +1,7 @@
 import { Game } from '~/server/models/Game'
 import { requireAuth } from '~/server/utils/auth'
 import { GameService } from '~/server/services/GameService'
+import { TurnTimer } from '~/server/services/TurnTimer'
 import { emitToGame } from '~/server/socket-instance'
 
 export default defineEventHandler(async (event) => {
@@ -36,6 +37,10 @@ export default defineEventHandler(async (event) => {
     const startedGame = await GameService.startGame(gameId)
 
     console.log('[START] Game started successfully:', startedGame.code)
+
+    // Start the turn timer
+    const timePerTurn = startedGame.settings?.timePerTurn || 30
+    TurnTimer.startTimer(startedGame._id.toString(), startedGame.code, timePerTurn)
 
     // Notifier tous les joueurs via Socket.io
     await emitToGame(startedGame.code, 'game-started', {

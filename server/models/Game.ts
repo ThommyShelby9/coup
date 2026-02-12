@@ -56,6 +56,10 @@ const playerSchema = new Schema<Player>(
     },
     disconnectedAt: {
       type: Date
+    },
+    skipCount: {
+      type: Number,
+      default: 0
     }
   },
   { _id: false }
@@ -69,7 +73,7 @@ const actionSchema = new Schema<Action>(
     },
     type: {
       type: String,
-      enum: ['income', 'foreign-aid', 'coup', 'tax', 'assassinate', 'steal', 'exchange', 'block'],
+      enum: ['income', 'foreign-aid', 'coup', 'tax', 'assassinate', 'steal', 'exchange', 'block', 'skip'],
       required: true
     },
     target: {

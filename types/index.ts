@@ -11,6 +11,7 @@ export type ActionType =
   | 'steal'
   | 'exchange'
   | 'block'
+  | 'skip'
 
 export type GamePhase = 'lobby' | 'playing' | 'ended'
 
@@ -43,6 +44,7 @@ export interface Player {
   isReady: boolean
   isConnected?: boolean
   disconnectedAt?: Date
+  skipCount?: number
 }
 
 export interface Action {
