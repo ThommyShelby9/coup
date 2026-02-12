@@ -4,8 +4,8 @@ export default defineNitroPlugin(async () => {
   const config = useRuntimeConfig()
   const mongoUri = config.mongodbUri
 
-  if (!mongoUri || mongoUri === 'mongodb://localhost:27017/coup-digital') {
-    console.warn('⚠️ [NUXT-SERVER] MONGODB_URI not configured, skipping MongoDB connection')
+  if (!mongoUri) {
+    console.warn('[NUXT-SERVER] MONGODB_URI not configured, skipping MongoDB connection')
     return
   }
 
