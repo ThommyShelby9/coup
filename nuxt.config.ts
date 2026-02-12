@@ -168,19 +168,10 @@ export default defineNuxtConfig({
   // Performance optimizations
   vite: {
     build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'three': ['three'],
-            'gsap': ['gsap'],
-            'socket': ['socket.io-client'],
-            'mongoose': ['mongoose']
-          }
-        }
-      }
+      chunkSizeWarningLimit: 1000
     },
     optimizeDeps: {
-      include: ['gsap', 'socket.io-client']
+      include: ['gsap', 'socket.io-client', 'three']
     }
   },
 
