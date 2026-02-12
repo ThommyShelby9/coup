@@ -15,8 +15,7 @@
     "build": "nuxt build --dotenv .env",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "prepare": "nuxt prepare",
-    "postinstall": "echo 'Skipping postinstall in production'"
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "6.8.0",
