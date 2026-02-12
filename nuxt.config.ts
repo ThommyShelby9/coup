@@ -113,7 +113,9 @@ export default defineNuxtConfig({
     workbox: {
       // Pas de navigateFallback en mode SSR (les pages sont rendues côté serveur)
       navigateFallback: undefined,
-      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
+      // Desactiver le precaching pour eviter les echecs d'install du SW
+      // (les assets sont caches via runtimeCaching a la place)
+      globPatterns: [],
       cleanupOutdatedCaches: true,
       skipWaiting: true,
       clientsClaim: true,
@@ -192,6 +194,18 @@ export default defineNuxtConfig({
       cache: false,
       headers: {
         'cache-control': 'no-store, no-cache, must-revalidate'
+      }
+    },
+    // Pages HTML: jamais en cache (evite les references vers des vieux chunks)
+    '/**': {
+      headers: {
+        'cache-control': 'no-cache, no-store, must-revalidate'
+      }
+    },
+    // Assets _nuxt: cache longue duree (les noms sont hashes)
+    '/_nuxt/**': {
+      headers: {
+        'cache-control': 'public, max-age=31536000, immutable'
       }
     },
     // Ignorer les routes PWA/Service Worker
