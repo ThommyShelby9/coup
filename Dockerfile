@@ -4,26 +4,26 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Copier package.json uniquement (pas le lockfile Windows qui manque les binaires Linux)
+# Copier package.json uniquement
 COPY package.json ./
 
-# Installer les dependances - npm install resout les bons binaires natifs pour Linux
+# Installer les dependances sans scripts (source pas encore copiee)
 RUN npm install --no-audit --no-fund --ignore-scripts
 
-# Installer les binaires natifs rollup pour Linux musl
-RUN npm install @rollup/rollup-linux-x64-musl --no-save 2>/dev/null || true
-
-# Executer les scripts postinstall maintenant
-RUN npm run --if-present postinstall || true
-
-# Copier le code source
+# Copier le code source AVANT nuxt prepare
 COPY . .
 
 # Nettoyer tout ancien build
 RUN rm -rf .output .nuxt
 
+# Maintenant que le source est la, executer nuxt prepare
+RUN npx nuxt prepare
+
 # Build Nuxt
 RUN npm run build
+
+# Verifier que les assets sont bien generes
+RUN ls -la .output/public/_nuxt/ | head -20
 
 # --- Stage production ---
 FROM node:22.12.0-alpine
