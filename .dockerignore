@@ -6,8 +6,11 @@ node_modules
 dist
 .git
 .github
-*.md
 .env
 .env.*
 .vscode
 .idea
+README.md
+CLAUDE.md
+error.md
+nul

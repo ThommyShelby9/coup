@@ -4,14 +4,17 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-# Copier les fichiers de config
-COPY package.json ./
+# Copier package.json ET package-lock.json pour des builds deterministes
+COPY package.json package-lock.json ./
 
-# Installer les dependances (sans lock file pour resoudre les bons binaires linux)
-RUN npm install --no-audit --no-fund
+# Installer les dependances avec ci pour respecter le lockfile
+RUN npm ci --no-audit --no-fund
 
 # Copier le code source
 COPY . .
+
+# Nettoyer tout ancien build avant de rebuilder
+RUN rm -rf .output .nuxt
 
 # Build Nuxt
 RUN npm run build
