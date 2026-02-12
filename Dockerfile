@@ -1,34 +1,33 @@
-# Utiliser Node.js 22.12.0 LTS
-FROM node:22.12.0-alpine
+FROM node:22.12.0-alpine AS build
 
-# Installer les dépendances système nécessaires
 RUN apk add --no-cache python3 make g++
 
-# Définir le répertoire de travail
 WORKDIR /app
 
-# Copier package.json et package-lock.json
-COPY package*.json ./
-COPY .npmrc ./
+# Copier les fichiers de config
+COPY package.json ./
 
-# Variables d'environnement pour le build
-ENV NODE_ENV=production
+# Installer les dependances (sans lock file pour resoudre les bons binaires linux)
+RUN npm install --no-audit --no-fund
 
-# Installer les dépendances (skip optional dependencies qui causent problème)
-RUN npm ci --omit=optional || npm install --omit=optional
-
-# Copier le reste des fichiers
+# Copier le code source
 COPY . .
 
-# Build l'application (nuxt prepare est dans le script build maintenant)
+# Build Nuxt
 RUN npm run build
 
-# Exposer le port
+# --- Stage production ---
+FROM node:22.12.0-alpine
+
+WORKDIR /app
+
+# Copier tout le build output
+COPY --from=build /app/.output .output
+
 EXPOSE 3000
 
-# Variables d'environnement runtime
 ENV HOST=0.0.0.0
 ENV PORT=3000
+ENV NODE_ENV=production
 
-# Démarrer l'application
 CMD ["node", ".output/server/index.mjs"]
