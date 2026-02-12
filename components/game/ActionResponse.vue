@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="action-response-modal glass-panel p-8 max-w-lg w-full border-2 border-gold-500/50 shadow-2xl">
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 modal-backdrop">
+    <div class="action-response-modal glass-panel p-4 sm:p-6 md:p-8 max-w-sm sm:max-w-lg w-full border-2 border-gold-500/50 shadow-2xl modal-content">
       <!-- Action annoncée -->
       <div class="text-center mb-6">
         <div class="mb-3">
@@ -9,7 +9,7 @@
 
         <div class="bg-royal-700/50 rounded-lg p-5 border border-gold-500/30">
           <div class="flex items-center justify-center gap-4">
-            <Icon :name="actionIcon" class="w-10 h-10 text-gold-400" />
+            <Icon :name="actionIcon" class="w-8 h-8 sm:w-10 sm:h-10 text-gold-400" />
             <div>
               <div class="font-medieval text-2xl text-gold-400">
                 {{ actionLabel }}
@@ -197,3 +197,41 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+.modal-backdrop {
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  animation: modal-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+</style>

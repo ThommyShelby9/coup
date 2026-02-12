@@ -130,6 +130,22 @@ export class GameService {
     // Retourner si l'action peut être contestée/bloquée
     const needsResponse = requiresRole(actionType) || canBlockAction(actionType)
 
+    // Si l'action ne nécessite pas de réponse, la résoudre automatiquement
+    if (!needsResponse) {
+      console.log(`✅ Action "${actionType}" ne nécessite pas de réponse, résolution automatique...`)
+      await this.resolveAction(gameId)
+      const updatedGame = await Game.findById(gameId)
+
+      return {
+        game: updatedGame,
+        action,
+        needsResponse: false,
+        canBeBlocked: false,
+        canBeChallenged: false,
+        blockingRoles: []
+      }
+    }
+
     return {
       game,
       action,

@@ -1,6 +1,13 @@
 <template>
   <div>
     <NuxtPage />
+
+    <!-- Composants PWA -->
+    <ClientOnly>
+      <InstallPrompt />
+      <UpdatePrompt />
+      <OfflineBanner />
+    </ClientOnly>
   </div>
 </template>
 

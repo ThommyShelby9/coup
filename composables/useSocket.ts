@@ -41,49 +41,131 @@ export const useSocket = () => {
     isConnected.value = false
   }
 
-  // Game event listeners
+  // Game event listeners - retournent une fonction de cleanup
   const onGameUpdate = (callback: (game: Game) => void) => {
     socket.value?.on('game-updated', callback)
+    return () => {
+      socket.value?.off('game-updated', callback)
+    }
   }
 
   const onPlayerJoined = (callback: (data: { player: any }) => void) => {
     socket.value?.on('player-joined', callback)
+    return () => {
+      socket.value?.off('player-joined', callback)
+    }
   }
 
   const onPlayerLeft = (callback: (data: { playerId: string }) => void) => {
     socket.value?.on('player-left', callback)
+    return () => {
+      socket.value?.off('player-left', callback)
+    }
   }
 
   const onPlayerReadyChanged = (callback: (data: { playerId: string; isReady: boolean }) => void) => {
     socket.value?.on('player-ready-changed', callback)
+    return () => {
+      socket.value?.off('player-ready-changed', callback)
+    }
   }
 
   const onGameStarted = (callback: (game: Game) => void) => {
     socket.value?.on('game-started', callback)
+    return () => {
+      socket.value?.off('game-started', callback)
+    }
   }
 
   const onActionExecuted = (callback: (data: { game: Game; action: Action; needsResponse: boolean }) => void) => {
     socket.value?.on('action-executed', callback)
+    return () => {
+      socket.value?.off('action-executed', callback)
+    }
   }
 
   const onActionChallenged = (callback: (data: { game: Game; challengerId: string }) => void) => {
     socket.value?.on('action-challenged', callback)
+    return () => {
+      socket.value?.off('action-challenged', callback)
+    }
   }
 
   const onActionBlocked = (callback: (data: { game: Game; blockerId: string; blockingRole: string }) => void) => {
     socket.value?.on('action-blocked', callback)
+    return () => {
+      socket.value?.off('action-blocked', callback)
+    }
   }
 
   const onActionResolved = (callback: (game: Game) => void) => {
     socket.value?.on('action-resolved', callback)
+    return () => {
+      socket.value?.off('action-resolved', callback)
+    }
   }
 
   const onGameEnded = (callback: (data: { game: Game; winner: any }) => void) => {
     socket.value?.on('game-ended', callback)
+    return () => {
+      socket.value?.off('game-ended', callback)
+    }
   }
 
   const onChatMessage = (callback: (data: { username: string; text: string; timestamp: Date }) => void) => {
     socket.value?.on('chat-message', callback)
+    return () => {
+      socket.value?.off('chat-message', callback)
+    }
+  }
+
+  const onChallengeResolved = (callback: (data: any) => void) => {
+    socket.value?.on('challenge-resolved', callback)
+    return () => {
+      socket.value?.off('challenge-resolved', callback)
+    }
+  }
+
+  const onBlockDeclared = (callback: (data: any) => void) => {
+    socket.value?.on('block-declared', callback)
+    return () => {
+      socket.value?.off('block-declared', callback)
+    }
+  }
+
+  const onPlayerDisconnected = (callback: (data: { playerName: string }) => void) => {
+    socket.value?.on('player-disconnected', callback)
+    return () => {
+      socket.value?.off('player-disconnected', callback)
+    }
+  }
+
+  const onPlayerReconnected = (callback: (data: { playerName: string }) => void) => {
+    socket.value?.on('player-reconnected', callback)
+    return () => {
+      socket.value?.off('player-reconnected', callback)
+    }
+  }
+
+  const onPlayerReplacedByBot = (callback: (data: { botName: string }) => void) => {
+    socket.value?.on('player-replaced-by-bot', callback)
+    return () => {
+      socket.value?.off('player-replaced-by-bot', callback)
+    }
+  }
+
+  const onTurnTimeout = (callback: (data: { message: string }) => void) => {
+    socket.value?.on('turn-timeout', callback)
+    return () => {
+      socket.value?.off('turn-timeout', callback)
+    }
+  }
+
+  const onGameStateSync = (callback: (gameData: Game) => void) => {
+    socket.value?.on('game-state-sync', callback)
+    return () => {
+      socket.value?.off('game-state-sync', callback)
+    }
   }
 
   // Game actions
@@ -150,6 +232,13 @@ export const useSocket = () => {
     onActionResolved,
     onGameEnded,
     onChatMessage,
+    onChallengeResolved,
+    onBlockDeclared,
+    onPlayerDisconnected,
+    onPlayerReconnected,
+    onPlayerReplacedByBot,
+    onTurnTimeout,
+    onGameStateSync,
     // Actions
     joinGame,
     leaveGame,

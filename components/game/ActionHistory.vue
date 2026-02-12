@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-panel p-4 w-80">
+  <div class="glass-panel p-3 sm:p-4 w-full sm:w-80 sm:max-w-xs">
     <div class="flex items-center justify-between mb-3">
       <h3 class="font-medieval text-lg text-gold-400">Historique</h3>
       <button
@@ -13,35 +13,48 @@
       </button>
     </div>
 
-    <div v-if="!isCollapsed" class="space-y-2 max-h-96 overflow-y-auto">
+    <!-- Utiliser Transition + max-height au lieu de v-if pour éviter layout shift -->
+    <Transition
+      name="collapse"
+      @enter="onEnter"
+      @after-enter="onAfterEnter"
+      @leave="onLeave"
+    >
       <div
-        v-for="(action, index) in recentActions"
-        :key="index"
-        class="p-3 bg-royal-800/30 rounded-lg text-sm"
+        v-show="!isCollapsed"
+        class="space-y-2 overflow-y-auto collapse-content"
+        :style="{ maxHeight: isCollapsed ? '0' : '24rem' }"
       >
-        <div class="flex items-start gap-2">
-          <Icon :name="getActionIcon(action.type)" class="w-4 h-4 text-gold-400 mt-0.5 flex-shrink-0" />
-          <div class="flex-1">
-            <div class="text-royal-100">
-              <span class="font-medium text-gold-400">{{ getPlayerName(action.playerId) }}</span>
-              {{ getActionText(action) }}
+        <div
+          v-for="(action, index) in recentActions"
+          :key="index"
+          class="p-3 bg-royal-800/30 rounded-lg text-sm action-item"
+          :style="{ animationDelay: `${index * 0.05}s` }"
+        >
+          <div class="flex items-start gap-2">
+            <Icon :name="getActionIcon(action.type)" class="w-4 h-4 text-gold-400 mt-0.5 flex-shrink-0" />
+            <div class="flex-1">
+              <div class="text-royal-100">
+                <span class="font-medium text-gold-400">{{ getPlayerName(action.playerId) }}</span>
+                {{ getActionText(action) }}
+              </div>
+              <div class="text-royal-400 text-xs mt-1">
+                {{ formatTime(action.timestamp) }}
+              </div>
             </div>
-            <div class="text-royal-400 text-xs mt-1">
-              {{ formatTime(action.timestamp) }}
+            <div v-if="action.contested" class="flex-shrink-0">
+              <span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded text-xs">
+                Contesté
+              </span>
             </div>
-          </div>
-          <div v-if="action.contested" class="flex-shrink-0">
-            <span class="px-2 py-0.5 bg-red-900/30 text-red-400 rounded text-xs">
-              Contesté
-            </span>
           </div>
         </div>
-      </div>
 
-      <div v-if="actions.length === 0" class="text-royal-400 text-center py-4">
-        Aucune action pour le moment
+        <div v-if="actions.length === 0" class="text-royal-400 text-center py-4">
+          Aucune action pour le moment
+        </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -114,4 +127,72 @@ const formatTime = (timestamp: Date) => {
     second: '2-digit'
   })
 }
+
+// Handlers pour transition smooth
+const onEnter = (el: Element) => {
+  const element = el as HTMLElement
+  element.style.maxHeight = '0'
+}
+
+const onAfterEnter = (el: Element) => {
+  const element = el as HTMLElement
+  element.style.maxHeight = '24rem'
+}
+
+const onLeave = (el: Element) => {
+  const element = el as HTMLElement
+  element.style.maxHeight = '0'
+}
 </script>
+
+<style scoped>
+.collapse-content {
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  will-change: max-height;
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  max-height: 0 !important;
+  opacity: 0;
+}
+
+.action-item {
+  animation: action-slide-in 0.4s ease-out backwards;
+  transition: all 0.2s ease;
+}
+
+.action-item:hover {
+  transform: translateX(4px);
+  background: rgba(30, 41, 59, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes action-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.glass-panel {
+  transition: all 0.3s ease;
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: scale(1.1);
+}
+</style>

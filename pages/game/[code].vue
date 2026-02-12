@@ -3,6 +3,11 @@
     <!-- Background animé -->
     <AnimatedBackground />
 
+    <!-- Game Effects (particules et étoiles) -->
+    <ClientOnly>
+      <GameEffects />
+    </ClientOnly>
+
     <!-- Toast Notifications -->
     <ToastNotification />
 
@@ -138,7 +143,7 @@
       </div>
 
       <div class="container mx-auto px-4 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <!-- Sidebar left -->
           <div class="space-y-4">
             <ActionHistory
@@ -151,7 +156,7 @@
           <!-- Main area -->
           <div class="lg:col-span-2 space-y-6">
             <!-- Players grid -->
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
               <div
                 v-for="(player, index) in game.players"
                 :key="player.userId"
@@ -323,7 +328,7 @@
         :player-name="getPlayerName(pendingAction.action.playerId)"
         :action-type="pendingAction.action.type"
         :claimed-role="pendingAction.action.claimedRole"
-        :target-name="pendingAction.action.target ? game.players.find((p: any) => p.userId === pendingAction.action.target)?.username : undefined"
+        :target-name="pendingAction.action.target ? game.players.find((p: Player) => p.userId === pendingAction.action.target)?.username : undefined"
         :can-challenge="!!pendingAction.action.claimedRole"
         :can-block="canBlockCurrentAction"
         :blocking-roles="getBlockingRoles(pendingAction.action.type)"
@@ -351,11 +356,30 @@
     <!-- Game ended -->
     <div v-else-if="game && game.phase === 'ended'" class="flex items-center justify-center min-h-screen">
       <div class="glass-panel p-12 text-center max-w-md mx-4">
-        <Icon name="lucide:trophy" class="w-24 h-24 text-gold-400 mx-auto mb-6" />
-        <h1 class="font-medieval text-4xl text-gold-400 mb-4">Victoire !</h1>
-        <p class="text-royal-200 text-xl mb-8">
-          <span class="text-gold-400 font-bold">{{ winnerName }}</span> remporte la partie !
-        </p>
+        <!-- Si le joueur actuel est le gagnant -->
+        <template v-if="isWinner">
+          <Icon name="lucide:trophy" class="w-24 h-24 text-gold-400 mx-auto mb-6 animate-bounce" />
+          <h1 class="font-medieval text-4xl text-gold-400 mb-4">🎉 Victoire ! 🎉</h1>
+          <p class="text-royal-200 text-xl mb-4">
+            Félicitations ! Vous avez remporté la partie !
+          </p>
+          <p class="text-royal-300 text-sm mb-8">
+            Votre maîtrise du bluff était exceptionnelle !
+          </p>
+        </template>
+
+        <!-- Si le joueur actuel a perdu -->
+        <template v-else>
+          <Icon name="lucide:skull" class="w-24 h-24 text-royal-400 mx-auto mb-6" />
+          <h1 class="font-medieval text-4xl text-royal-300 mb-4">Défaite</h1>
+          <p class="text-royal-200 text-xl mb-4">
+            <span class="text-gold-400 font-bold">{{ winnerName }}</span> a remporté la partie
+          </p>
+          <p class="text-royal-400 text-sm mb-8">
+            Vous ferez mieux la prochaine fois !
+          </p>
+        </template>
+
         <NuxtLink to="/lobby" class="btn-primary inline-flex items-center gap-2">
           <Icon name="lucide:arrow-left" class="w-5 h-5" />
           Retour au lobby
@@ -366,6 +390,8 @@
 </template>
 
 <script setup lang="ts">
+import type { Game, ChatMessage, Action, Card, Player } from '~/types'
+
 const route = useRoute()
 const authStore = useAuthStore()
 const socket = useSocketService()
@@ -387,16 +413,40 @@ const actionLabels: Record<string, string> = {
   'exchange': 'Échange de cartes',
   'block': 'Blocage'
 }
-const game = ref<any>(null)
+const game = ref<Game | null>(null)
 const showTargetSelector = ref(false)
 const pendingActionType = ref('')
-const chatMessages = ref<any[]>([])
+const chatMessages = ref<ChatMessage[]>([])
 const showActionResponse = ref(false)
-const pendingAction = ref<any>(null)
+
+interface PendingActionData {
+  game: Game
+  action: Action
+  needsResponse: boolean
+}
+const pendingAction = ref<PendingActionData | null>(null)
 const showRevealModal = ref(false)
-const revealData = ref<any>(null)
+
+interface RevealData {
+  playerName: string
+  card: Card
+  success: boolean
+}
+const revealData = ref<RevealData | null>(null)
 const showVictoryModal = ref(false)
-const victoryData = ref<any>(null)
+
+interface VictoryData {
+  winner: Player
+  stats: {
+    turns: number
+    bluffs: number
+    duration: string
+  }
+}
+const victoryData = ref<VictoryData | null>(null)
+
+// Stocker les unsubscribe functions pour cleanup
+const socketUnsubscribers: Array<() => void> = []
 
 // Système de bot automatique (après la déclaration de game)
 const botTurn = useBotTurn(game, () => {
@@ -406,7 +456,7 @@ const botTurn = useBotTurn(game, () => {
 
 const myPlayer = computed(() => {
   if (!game.value || !authStore.user) return null
-  return game.value.players.find((p: any) => p.userId === authStore.user!.id)
+  return game.value.players.find((p: Player) => p.userId === authStore.user!.id)
 })
 
 const myCards = computed(() => myPlayer.value?.cards || [])
@@ -436,12 +486,12 @@ const allPlayersReady = computed(() => {
     return false
   }
 
-  const playersStatus = game.value.players.map((p: any) => ({
+  const playersStatus = game.value.players.map((p: Player) => ({
     username: p.username,
     isReady: p.isReady
   }))
 
-  const allReady = game.value.players.every((p: any) => p.isReady)
+  const allReady = game.value.players.every((p: Player) => p.isReady)
 
   console.log('[READY-CHECK] Players:', playersStatus)
   console.log('[READY-CHECK] All ready:', allReady)
@@ -458,8 +508,14 @@ const currentPlayerName = computed(() => {
 
 const winnerName = computed(() => {
   if (!game.value) return ''
-  const winner = game.value.players.find((p: any) => p.isAlive)
+  const winner = game.value.players.find((p: Player) => p.isAlive)
   return winner?.username || ''
+})
+
+const isWinner = computed(() => {
+  if (!game.value || !authStore.user) return false
+  const winner = game.value.players.find((p: Player) => p.isAlive)
+  return winner?.userId.toString() === authStore.user.id
 })
 
 const canBlockCurrentAction = computed(() => {
@@ -468,12 +524,26 @@ const canBlockCurrentAction = computed(() => {
 })
 
 const getBlockingRoles = (actionType: string): string[] => {
+  // Rôles qui PEUVENT bloquer l'action
   const blockingMap: Record<string, string[]> = {
     'foreign-aid': ['Duke'],
     'assassinate': ['Contessa'],
     'steal': ['Captain', 'Ambassador']
   }
-  return blockingMap[actionType] || []
+
+  const possibleBlockingRoles = blockingMap[actionType] || []
+
+  // IMPORTANT: Ne retourner QUE les rôles que le joueur possède réellement
+  if (!myCards.value || myCards.value.length === 0) {
+    return []
+  }
+
+  const myRoles = myCards.value
+    .filter((card: Card) => card.isRevealed === false) // Seulement les cartes non révélées
+    .map((card: Card) => card.type)
+
+  // Filtrer pour ne retourner que les rôles qu'on a ET qui peuvent bloquer
+  return possibleBlockingRoles.filter(role => myRoles.includes(role))
 }
 
 const loadGame = async () => {
@@ -512,7 +582,7 @@ const startGame = async () => {
 
     showToast('Partie démarrée !', 'success')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error starting game:', error)
     showToast(error.data?.message || 'Erreur lors du démarrage de la partie', 'error')
   } finally {
@@ -548,7 +618,7 @@ const executeAction = async (actionType: string, claimedRole?: string) => {
 
     showToast(`Action ${actionType} exécutée !`, 'success')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur action:', error)
     showToast(error.data?.message || 'Erreur lors de l\'action', 'error')
   }
@@ -560,7 +630,7 @@ const selectTarget = (actionType: string) => {
 }
 
 // Handler de sélection de cible (appelé par TargetSelector)
-const handleTargetSelected = async (targetPlayer: any) => {
+const handleTargetSelected = async (targetPlayer: Player) => {
   if (!game.value || !pendingActionType.value) return
 
   // @ts-ignore
@@ -579,7 +649,7 @@ const handleTargetSelected = async (targetPlayer: any) => {
 
     showToast(`Action ${pendingActionType.value} exécutée !`, 'success')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur action:', error)
     showToast(error.data?.message || 'Erreur lors de l\'action', 'error')
   }
@@ -590,7 +660,7 @@ const handleTargetSelected = async (targetPlayer: any) => {
   window.__pendingClaimedRole = undefined
 }
 
-const onTargetSelected = async (player: any) => {
+const onTargetSelected = async (player: Player) => {
   if (!game.value || !pendingActionType.value) return
 
   const claimedRole = pendingActionType.value === 'assassinate' ? 'Assassin' :
@@ -609,7 +679,7 @@ const onTargetSelected = async (player: any) => {
 
     showToast(`Action ${pendingActionType.value} exécutée !`, 'success')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur action:', error)
     showToast(error.data?.message || 'Erreur lors de l\'action', 'error')
   }
@@ -638,7 +708,7 @@ const addBot = async () => {
 
     showToast('Bot ajouté avec succès !', 'success')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error adding bot:', error)
     showToast(error.data?.message || 'Erreur lors de l\'ajout du bot', 'error')
   } finally {
@@ -646,7 +716,7 @@ const addBot = async () => {
   }
 }
 
-const handleBotAdded = async (bot: any) => {
+const handleBotAdded = async (bot: Player) => {
   console.log('Bot ajouté:', bot)
   // Recharger l'état du jeu
   await loadGame()
@@ -654,7 +724,7 @@ const handleBotAdded = async (bot: any) => {
 
 // Helper pour obtenir le nom d'un joueur
 const getPlayerName = (playerId: string) => {
-  const player = game.value?.players.find((p: any) => p.userId.toString() === playerId.toString())
+  const player = game.value?.players.find((p: Player) => p.userId.toString() === playerId.toString())
   return player?.username || 'Inconnu'
 }
 
@@ -671,7 +741,7 @@ const handleChallengeAction = async () => {
 
     showToast('Action contestée !', 'info')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur contestation:', error)
     showToast(error.data?.message || 'Erreur lors de la contestation', 'error')
   }
@@ -693,7 +763,7 @@ const handleBlockAction = async (blockingRole: string) => {
 
     showToast(`Action bloquée avec ${blockingRole} !`, 'success')
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur blocage:', error)
     showToast(error.data?.message || 'Erreur lors du blocage', 'error')
   }
@@ -713,7 +783,7 @@ const handleAcceptAction = async () => {
     })
 
     await loadGame()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur résolution:', error)
     showToast(error.data?.message || 'Erreur lors de la résolution', 'error')
   }
@@ -759,29 +829,48 @@ onMounted(async () => {
   socket.joinGame(gameCode)
 
   // Écouter les notifications de changement (puis recharger via API)
-  socket.onPlayerJoined(() => {
-    console.log('Player joined, reloading game state...')
-    loadGame()
-  })
+  socketUnsubscribers.push(
+    socket.onPlayerJoined(() => {
+      console.log('Player joined, reloading game state...')
+      loadGame()
+    })
+  )
 
-  socket.onPlayerLeft(() => {
-    console.log('Player left, reloading game state...')
-    loadGame()
-  })
+  socketUnsubscribers.push(
+    socket.onPlayerLeft(() => {
+      console.log('Player left, reloading game state...')
+      loadGame()
+    })
+  )
 
-  socket.onPlayerReadyChanged((data) => {
-    console.log('Player ready changed:', data)
-    loadGame()
-  })
+  socketUnsubscribers.push(
+    socket.onPlayerReadyChanged((data) => {
+      console.log('Player ready changed:', data)
+      loadGame()
+    })
+  )
 
-  socket.onGameStarted(() => {
-    console.log('Game started!')
-    loadGame()
-    // Démarrer la surveillance des tours de bots
-    botTurn.startBotTurnWatcher()
-  })
+  socketUnsubscribers.push(
+    socket.onGameStarted(() => {
+      console.log('Game started!')
+      loadGame()
+      // Démarrer la surveillance des tours de bots
+      botTurn.startBotTurnWatcher()
 
-  socket.onActionExecuted((data) => {
+      // Animation de distribution des cartes
+      if (process.client) {
+        setTimeout(() => {
+          const cardElements = document.querySelectorAll('.card-3d') as NodeListOf<HTMLElement>
+          if (cardElements.length > 0) {
+            animations.dealCards(Array.from(cardElements), 0.2)
+          }
+        }, 500)
+      }
+    })
+  )
+
+  socketUnsubscribers.push(
+    socket.onActionExecuted((data) => {
     console.log('Action executed:', data)
 
     // Mettre à jour l'état du jeu
@@ -796,6 +885,32 @@ onMounted(async () => {
     const actionLabel = actionLabels[data.action.type] || data.action.type
     showToast(`${playerName} a fait ${actionLabel}`, 'info')
 
+    // Animations spécifiques selon le type d'action
+    if (process.client) {
+      nextTick(() => {
+        const actionType = data.action.type
+
+        // Animation de transfert de pièces
+        if (['steal', 'tax', 'foreign-aid', 'income'].includes(actionType)) {
+          const fromElement = document.querySelector(`[data-player-id="${data.action.playerId}"]`) as HTMLElement
+          if (fromElement) {
+            animations.pulseElement(fromElement, '#10b981')
+          }
+        }
+
+        // Animation pour les actions avec cible
+        if (data.action.target && ['steal', 'assassinate', 'coup'].includes(actionType)) {
+          const fromElement = document.querySelector(`[data-player-id="${data.action.playerId}"]`) as HTMLElement
+          const toElement = document.querySelector(`[data-player-id="${data.action.target}"]`) as HTMLElement
+
+          if (fromElement && toElement && actionType === 'steal') {
+            // Animation de vol de pièces
+            animations.animateCoinTransfer(toElement, fromElement, 2)
+          }
+        }
+      })
+    }
+
     // Si cette action nécessite une réponse ET que je peux répondre
     if (data.needsResponse) {
       const myUserId = authStore.user?.id
@@ -806,25 +921,41 @@ onMounted(async () => {
         showActionResponse.value = true
       }
     }
-  })
+    })
+  )
 
-  socket.onActionChallenged((data) => {
+  socketUnsubscribers.push(
+    socket.onActionChallenged((data) => {
     console.log('Action challenged:', data)
     loadGame()
 
     // Toast notification
     showToast(`${data.challengerName} conteste l'action!`, 'warning')
-  })
 
-  socket.onActionBlocked((data) => {
+    // Animation de shake sur le challenger
+    if (process.client) {
+      nextTick(() => {
+        const challengerElement = document.querySelector(`[data-player-id="${data.challengerId}"]`) as HTMLElement
+        if (challengerElement) {
+          animations.shakeElement(challengerElement)
+        }
+      })
+    }
+    })
+  )
+
+  socketUnsubscribers.push(
+    socket.onActionBlocked((data) => {
     console.log('Action blocked:', data)
     loadGame()
 
     // Toast notification
     showToast(`${data.blockerName} bloque avec ${data.blockingRole}!`, 'warning')
-  })
+    })
+  )
 
-  socket.onActionResolved((data) => {
+  socketUnsubscribers.push(
+    socket.onActionResolved((data) => {
     console.log('Action resolved:', data)
     if (data.game) {
       game.value = data.game
@@ -832,10 +963,12 @@ onMounted(async () => {
       loadGame()
     }
     showActionResponse.value = false
-  })
+    })
+  )
 
   // Nouveau listener pour challenge resolved
-  socket.onChallengeResolved((data) => {
+  socketUnsubscribers.push(
+    socket.onChallengeResolved((data) => {
     console.log('Challenge resolved:', data)
     game.value = data.game
     showActionResponse.value = false
@@ -863,10 +996,12 @@ onMounted(async () => {
         showRevealModal.value = false
       }, 3000)
     }
-  })
+    })
+  )
 
   // Nouveau listener pour block declared
-  socket.onBlockDeclared((data) => {
+  socketUnsubscribers.push(
+    socket.onBlockDeclared((data) => {
     console.log('Block declared:', data)
     game.value = data.game
     showActionResponse.value = false
@@ -874,9 +1009,11 @@ onMounted(async () => {
     // Toast notification
     const blockerName = data.blockerName
     showToast(`${blockerName} bloque avec ${data.blockingRole}`, 'warning')
-  })
+    })
+  )
 
-  socket.onGameEnded((data) => {
+  socketUnsubscribers.push(
+    socket.onGameEnded((data) => {
     console.log('Game ended:', data)
 
     if (data.game) {
@@ -889,12 +1026,10 @@ onMounted(async () => {
     showToast(`🎉 ${data.winner.username} a gagné!`, 'success')
 
     // Victory animation (confetti)
-    const winnerElement = document.querySelector(`[data-player-id="${data.winner.userId}"]`) as HTMLElement
-    if (winnerElement) {
-      animations.animateVictory(winnerElement)
-    } else {
-      // Fallback: just create confetti
-      animations.animateVictory(document.body)
+    if (process.client) {
+      setTimeout(() => {
+        animations.celebrateVictory()
+      }, 500)
     }
 
     // Afficher modal victoire
@@ -907,41 +1042,59 @@ onMounted(async () => {
       }
     }
     showVictoryModal.value = true
-  })
+    })
+  )
 
   // Disconnection/reconnection events
-  socket.onPlayerDisconnected((data) => {
+  socketUnsubscribers.push(
+    socket.onPlayerDisconnected((data) => {
     showToast(`${data.playerName} s'est déconnecté`, 'warning')
     loadGame() // Reload to update player status
-  })
+    })
+  )
 
-  socket.onPlayerReconnected((data) => {
+  socketUnsubscribers.push(
+    socket.onPlayerReconnected((data) => {
     showToast(`${data.playerName} s'est reconnecté`, 'success')
     loadGame()
-  })
+    })
+  )
 
-  socket.onPlayerReplacedByBot((data) => {
+  socketUnsubscribers.push(
+    socket.onPlayerReplacedByBot((data) => {
     showToast(`${data.botName} remplace le joueur déconnecté`, 'info')
     loadGame()
-  })
+    })
+  )
 
-  socket.onTurnTimeout((data) => {
-    showToast(data.message, 'warning')
-  })
+  socketUnsubscribers.push(
+    socket.onTurnTimeout((data) => {
+      showToast(data.message, 'warning')
+    })
+  )
 
-  socket.onGameStateSync((gameData) => {
-    game.value = gameData
-    showToast('État du jeu synchronisé', 'success')
-  })
+  socketUnsubscribers.push(
+    socket.onGameStateSync((gameData) => {
+      game.value = gameData
+      // Toast désactivé - trop fréquent, cause des layout shifts
+      // showToast('État du jeu synchronisé', 'success')
+    })
+  )
 
   // Chat en temps réel
-  socket.onChatMessage((data) => {
-    console.log('Chat message received:', data)
-    chatMessages.value.push(data)
-  })
+  socketUnsubscribers.push(
+    socket.onChatMessage((data) => {
+      console.log('Chat message received:', data)
+      chatMessages.value.push(data)
+    })
+  )
 })
 
 onUnmounted(() => {
+  // Désabonner tous les socket listeners
+  socketUnsubscribers.forEach(unsub => unsub())
+  socketUnsubscribers.length = 0
+
   const gameCode = route.params.code as string
   socket.leaveGame(gameCode)
   botTurn.stopBotTurnWatcher()
@@ -1012,7 +1165,8 @@ useHead({
   overflow: hidden;
 }
 
-.player-card-hover::after {
+/* Animation card-shimmer DÉSACTIVÉE - causait des layout shifts */
+/* .player-card-hover::after {
   content: '';
   position: absolute;
   top: -50%;
@@ -1026,21 +1180,27 @@ useHead({
     transparent 70%
   );
   animation: card-shimmer 3s ease-in-out infinite;
-}
+} */
 
-@keyframes card-shimmer {
+/* Animation card-shimmer supprimée - plus utilisée */
+/* @keyframes card-shimmer {
   0% {
     transform: translateX(-100%) translateY(-100%) rotate(45deg);
   }
   100% {
     transform: translateX(100%) translateY(100%) rotate(45deg);
   }
-}
+} */
 
 .player-active {
-  animation: player-glow 2s ease-in-out infinite;
+  /* animation: player-glow 2s ease-in-out infinite; */ /* DÉSACTIVÉ - test layout shift */
   position: relative;
   z-index: 10;
+  /* Style statique pour le joueur actif */
+  box-shadow:
+    0 0 20px rgba(251, 191, 36, 0.5),
+    0 0 40px rgba(251, 191, 36, 0.3);
+  border-color: rgba(251, 191, 36, 0.8);
 }
 
 @keyframes player-glow {
@@ -1060,7 +1220,8 @@ useHead({
   }
 }
 
-.player-active::before {
+/* .player-active::before DÉSACTIVÉ - test layout shift */
+/* .player-active::before {
   content: '';
   position: absolute;
   inset: -2px;
@@ -1072,7 +1233,7 @@ useHead({
   mask-composite: exclude;
   animation: border-rotate 3s linear infinite;
   pointer-events: none;
-}
+} */
 
 @keyframes border-rotate {
   0% {
@@ -1102,5 +1263,131 @@ useHead({
     rgba(30, 41, 59, 0.9),
     rgba(30, 41, 59, 0.7)
   );
+}
+
+/* Animations d'entrée pour les joueurs dans le lobby */
+.grid > div {
+  animation: fade-slide-in 0.5s ease-out backwards;
+}
+
+.grid > div:nth-child(1) { animation-delay: 0.1s; }
+.grid > div:nth-child(2) { animation-delay: 0.2s; }
+.grid > div:nth-child(3) { animation-delay: 0.3s; }
+.grid > div:nth-child(4) { animation-delay: 0.4s; }
+.grid > div:nth-child(5) { animation-delay: 0.5s; }
+.grid > div:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Effet de hover pour les badges "Prêt" */
+span {
+  transition: all 0.2s ease;
+}
+
+/* Animation de pulse pour le badge "Prêt" */
+.bg-emerald-500\/20 {
+  animation: ready-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ready-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  }
+}
+
+/* Amélioration des boutons */
+button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Effet de ripple au clic */
+button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+
+button:active::after {
+  width: 300px;
+  height: 300px;
+  opacity: 1;
+  transition: 0s;
+}
+
+/* Animation du bouton "Démarrer la partie" */
+.btn-primary:not(:disabled) {
+  animation: btn-glow 2s ease-in-out infinite;
+}
+
+@keyframes btn-glow {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+  }
+  50% {
+    box-shadow: 0 8px 30px rgba(251, 191, 36, 0.6);
+  }
+}
+
+/* Transition fluide pour les avatars */
+.w-12.h-12 {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.w-12.h-12:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.5);
+}
+
+/* Animation pour les icônes */
+svg {
+  transition: transform 0.2s ease;
+}
+
+button:hover svg {
+  transform: scale(1.1);
+}
+
+/* Animation de loading spinner améliorée */
+.animate-spin {
+  animation: spin 1s linear infinite, pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.8));
+  }
 }
 </style>

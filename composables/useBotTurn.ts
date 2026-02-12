@@ -76,10 +76,14 @@ export const useBotTurn = (gameRef: Ref<any>, onTurnExecuted?: () => void) => {
       if (
         gameRef.value?.phase === 'playing' &&
         isCurrentPlayerBot.value &&
-        !isExecutingBotTurn.value &&
-        !gameRef.value?.lastAction?.resolved === false // Pas d'action en attente
+        !isExecutingBotTurn.value
       ) {
-        executeBotTurn()
+        // Vérifier qu'il n'y a pas d'action en attente de résolution
+        const hasUnresolvedAction = gameRef.value?.lastAction && gameRef.value.lastAction.resolved === false
+
+        if (!hasUnresolvedAction) {
+          executeBotTurn()
+        }
       }
     }, 2000)
 

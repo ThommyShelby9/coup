@@ -2,359 +2,219 @@ import { gsap } from 'gsap'
 
 export const useGameAnimations = () => {
   /**
-   * Anime la distribution des cartes aux joueurs
+   * Animation de transfert de pièces entre joueurs
    */
-  const animateCardDeal = (cardElements: HTMLElement[], playerPositions: { x: number; y: number }[]) => {
-    cardElements.forEach((card, index) => {
-      const targetPos = playerPositions[index]
-
-      gsap.fromTo(card, {
-        x: 0,
-        y: 0,
-        rotation: 0,
-        scale: 0,
-        opacity: 0
-      }, {
-        x: targetPos.x,
-        y: targetPos.y,
-        rotation: Math.random() * 20 - 10,
-        scale: 1,
-        opacity: 1,
-        duration: 0.8,
-        delay: index * 0.1,
-        ease: "back.out(1.7)"
-      })
-    })
-  }
-
-  /**
-   * Anime le transfert de pièces entre joueurs
-   */
-  const animateCoinTransfer = (
-    fromElement: HTMLElement,
-    toElement: HTMLElement,
-    amount: number,
-    onComplete?: () => void
-  ) => {
+  const animateCoinTransfer = (fromElement: HTMLElement, toElement: HTMLElement, amount: number) => {
     const fromRect = fromElement.getBoundingClientRect()
     const toRect = toElement.getBoundingClientRect()
 
-    for (let i = 0; i < amount; i++) {
+    for (let i = 0; i < Math.min(amount, 5); i++) {
       const coin = document.createElement('div')
-      coin.innerHTML = '<svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="2" fill="url(#goldGradient)"/><defs><linearGradient id="goldGradient"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs></svg>'
-      coin.className = 'fixed z-50 pointer-events-none text-gold-400'
-      coin.style.left = `${fromRect.left + fromRect.width / 2}px`
-      coin.style.top = `${fromRect.top + fromRect.height / 2}px`
-      coin.style.filter = 'drop-shadow(0 4px 12px rgba(251, 191, 36, 0.8))'
+      coin.className = 'coin-particle'
+      coin.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M6 12h12"/></svg>'
+      coin.style.cssText = `
+        position: fixed;
+        left: ${fromRect.left + fromRect.width / 2}px;
+        top: ${fromRect.top + fromRect.height / 2}px;
+        color: #fbbf24;
+        z-index: 9999;
+        pointer-events: none;
+        filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.8));
+      `
+
       document.body.appendChild(coin)
 
-      // Animation arc parabolique
-      const timeline = gsap.timeline({
+      gsap.to(coin, {
+        x: toRect.left - fromRect.left + (Math.random() * 20 - 10),
+        y: toRect.top - fromRect.top + (Math.random() * 20 - 10),
+        rotation: 720 + Math.random() * 360,
+        scale: 1.5,
+        duration: 0.8 + i * 0.1,
+        delay: i * 0.15,
+        ease: 'power2.out',
         onComplete: () => {
-          coin.remove()
-          if (i === amount - 1 && onComplete) {
-            onComplete()
-          }
+          gsap.to(coin, {
+            scale: 0,
+            opacity: 0,
+            duration: 0.2,
+            onComplete: () => coin.remove()
+          })
         }
       })
-
-      const midX = (toRect.left - fromRect.left) / 2 + (Math.random() - 0.5) * 50
-      const midY = (toRect.top - fromRect.top) / 2 - 100 + (Math.random() - 0.5) * 50
-
-      timeline
-        .to(coin, {
-          x: midX,
-          y: midY,
-          scale: 1.5,
-          rotation: 180,
-          duration: 0.5,
-          delay: i * 0.08,
-          ease: "power2.out"
-        })
-        .to(coin, {
-          x: toRect.left - fromRect.left + (Math.random() * 20 - 10),
-          y: toRect.top - fromRect.top + (Math.random() * 20 - 10),
-          scale: 0.5,
-          rotation: 360,
-          duration: 0.5,
-          ease: "power2.in"
-        })
     }
   }
 
   /**
-   * Anime un bluff réussi (effet de succès)
+   * Animation de confettis pour la victoire
    */
-  const animateBluffSuccess = (playerElement: HTMLElement) => {
-    const timeline = gsap.timeline()
-
-    timeline
-      .to(playerElement, {
-        boxShadow: '0 0 30px rgba(16, 185, 129, 0.8)',
-        scale: 1.05,
-        duration: 0.3,
-        ease: "power2.out"
-      })
-      .to(playerElement, {
-        boxShadow: '0 0 0px rgba(16, 185, 129, 0)',
-        scale: 1,
-        duration: 0.5,
-        ease: "power2.in"
-      })
-
-    // Particules de succès
-    createSuccessParticles(playerElement)
-  }
-
-  /**
-   * Anime un bluff échoué (effet de tremblement)
-   */
-  const animateBluffFailed = (playerElement: HTMLElement) => {
-    gsap.to(playerElement, {
-      x: [-10, 10, -10, 10, 0],
-      duration: 0.5,
-      ease: "power2.inOut"
-    })
-
-    gsap.to(playerElement, {
-      boxShadow: '0 0 20px rgba(220, 38, 38, 0.8)',
-      duration: 0.3,
-      yoyo: true,
-      repeat: 3
-    })
-  }
-
-  /**
-   * Anime le retournement d'une carte
-   */
-  const animateCardFlip = (cardElement: HTMLElement, onComplete?: () => void) => {
-    gsap.to(cardElement, {
-      rotateY: 180,
-      duration: 0.6,
-      ease: "power2.inOut",
-      onComplete
-    })
-  }
-
-  /**
-   * Anime l'élimination d'une carte (disparition)
-   */
-  const animateCardElimination = (cardElement: HTMLElement, onComplete?: () => void) => {
-    const timeline = gsap.timeline()
-
-    timeline
-      .to(cardElement, {
-        scale: 1.1,
-        duration: 0.2,
-        ease: "power2.out"
-      })
-      .to(cardElement, {
-        scale: 0,
-        rotation: 360,
-        opacity: 0,
-        duration: 0.5,
-        ease: "back.in(1.7)",
-        onComplete
-      })
-  }
-
-  /**
-   * Anime une action agressive (attaque, assassinat)
-   */
-  const animateAttack = (attackerElement: HTMLElement, targetElement: HTMLElement) => {
-    const attackerRect = attackerElement.getBoundingClientRect()
-    const targetRect = targetElement.getBoundingClientRect()
-
-    // Créer un projectile visuel
-    const projectile = document.createElement('div')
-    projectile.className = 'fixed w-4 h-4 bg-red-500 rounded-full z-50 pointer-events-none'
-    projectile.style.left = `${attackerRect.left + attackerRect.width / 2}px`
-    projectile.style.top = `${attackerRect.top + attackerRect.height / 2}px`
-    document.body.appendChild(projectile)
-
-    // Animation de l'attaquant
-    gsap.to(attackerElement, {
-      scale: 1.1,
-      duration: 0.2,
-      yoyo: true,
-      repeat: 1,
-      ease: "power2.inOut"
-    })
-
-    // Animation du projectile
-    gsap.to(projectile, {
-      x: targetRect.left - attackerRect.left,
-      y: targetRect.top - attackerRect.top,
-      duration: 0.5,
-      ease: "power2.in",
-      onComplete: () => {
-        projectile.remove()
-        // Shake de la cible
-        gsap.to(targetElement, {
-          x: [-5, 5, -5, 5, 0],
-          duration: 0.3,
-          ease: "power2.inOut"
-        })
-      }
-    })
-  }
-
-  /**
-   * Anime l'apparition d'un modal
-   */
-  const animateModalShow = (modalElement: HTMLElement) => {
-    gsap.fromTo(modalElement, {
-      scale: 0.8,
-      opacity: 0,
-      y: 50
-    }, {
-      scale: 1,
-      opacity: 1,
-      y: 0,
-      duration: 0.4,
-      ease: "back.out(1.7)"
-    })
-  }
-
-  /**
-   * Anime la disparition d'un modal
-   */
-  const animateModalHide = (modalElement: HTMLElement, onComplete?: () => void) => {
-    gsap.to(modalElement, {
-      scale: 0.8,
-      opacity: 0,
-      y: 50,
-      duration: 0.3,
-      ease: "power2.in",
-      onComplete
-    })
-  }
-
-  /**
-   * Anime le passage au tour suivant (highlight du joueur actif)
-   */
-  const animateTurnChange = (newActivePlayerElement: HTMLElement) => {
-    const timeline = gsap.timeline()
-
-    timeline
-      .to(newActivePlayerElement, {
-        boxShadow: '0 0 40px rgba(251, 191, 36, 0.8)',
-        scale: 1.05,
-        duration: 0.5,
-        ease: "power2.out"
-      })
-      .to(newActivePlayerElement, {
-        boxShadow: '0 0 20px rgba(251, 191, 36, 0.5)',
-        scale: 1,
-        duration: 0.5,
-        ease: "power2.in"
-      })
-  }
-
-  /**
-   * Anime la victoire (confettis et effet dramatique)
-   */
-  const animateVictory = (winnerElement: HTMLElement) => {
-    const timeline = gsap.timeline()
-
-    timeline
-      .to(winnerElement, {
-        scale: 1.2,
-        rotation: 5,
-        duration: 0.5,
-        ease: "back.out(1.7)"
-      })
-      .to(winnerElement, {
-        rotation: 0,
-        duration: 0.3,
-        ease: "power2.inOut"
-      })
-
-    // Créer des confettis
-    createVictoryConfetti()
-  }
-
-  /**
-   * Crée des particules de succès autour d'un élément
-   */
-  const createSuccessParticles = (element: HTMLElement) => {
-    const rect = element.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-
-    for (let i = 0; i < 12; i++) {
-      const particle = document.createElement('div')
-      particle.className = 'fixed w-2 h-2 rounded-full bg-emerald-400 z-50 pointer-events-none'
-      particle.style.left = `${centerX}px`
-      particle.style.top = `${centerY}px`
-      document.body.appendChild(particle)
-
-      const angle = (i / 12) * Math.PI * 2
-      const distance = 50 + Math.random() * 50
-
-      gsap.to(particle, {
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: 0,
-        scale: 0,
-        duration: 0.8,
-        ease: "power2.out",
-        onComplete: () => particle.remove()
-      })
-    }
-  }
-
-  /**
-   * Crée des confettis pour la victoire
-   */
-  const createVictoryConfetti = () => {
+  const celebrateVictory = () => {
     const colors = ['#fbbf24', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+    const confettiCount = 50
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < confettiCount; i++) {
       const confetti = document.createElement('div')
-      confetti.className = 'fixed w-3 h-3 z-50 pointer-events-none'
-      confetti.style.background = colors[Math.floor(Math.random() * colors.length)]
-      confetti.style.left = `${Math.random() * window.innerWidth}px`
-      confetti.style.top = '-20px'
+      confetti.className = 'confetti-particle'
+      confetti.style.cssText = `
+        position: fixed;
+        left: ${Math.random() * window.innerWidth}px;
+        top: -20px;
+        width: 10px;
+        height: 10px;
+        background: ${colors[Math.floor(Math.random() * colors.length)]};
+        z-index: 9999;
+        pointer-events: none;
+        border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+      `
+
       document.body.appendChild(confetti)
 
       gsap.to(confetti, {
-        y: window.innerHeight + 50,
-        x: (Math.random() - 0.5) * 200,
+        y: window.innerHeight + 100,
+        x: `+=${Math.random() * 400 - 200}`,
         rotation: Math.random() * 720,
-        opacity: [1, 1, 0],
+        opacity: 0,
         duration: 2 + Math.random() * 2,
-        delay: Math.random() * 0.5,
-        ease: "power2.in",
+        delay: i * 0.05,
+        ease: 'power1.in',
         onComplete: () => confetti.remove()
       })
     }
   }
 
   /**
-   * Pulse animation pour attirer l'attention
+   * Animation de révélation de carte
    */
-  const animatePulse = (element: HTMLElement) => {
+  const revealCard = (cardElement: HTMLElement) => {
+    const timeline = gsap.timeline()
+
+    timeline
+      .to(cardElement, {
+        rotateY: 90,
+        duration: 0.3,
+        ease: 'power2.in'
+      })
+      .set(cardElement, {
+        // Change le contenu ici si nécessaire
+      })
+      .to(cardElement, {
+        rotateY: 0,
+        duration: 0.3,
+        ease: 'power2.out'
+      })
+      .to(cardElement, {
+        scale: 1.1,
+        duration: 0.2,
+        yoyo: true,
+        repeat: 1
+      })
+
+    return timeline
+  }
+
+  /**
+   * Animation de shake pour les actions refusées
+   */
+  const shakeElement = (element: HTMLElement) => {
     gsap.to(element, {
-      scale: [1, 1.05, 1],
-      duration: 0.6,
-      repeat: -1,
-      ease: "power2.inOut"
+      x: -10,
+      duration: 0.1,
+      yoyo: true,
+      repeat: 5,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        gsap.set(element, { x: 0 })
+      }
     })
   }
 
+  /**
+   * Animation de pulse pour attirer l'attention
+   */
+  const pulseElement = (element: HTMLElement, color: string = '#fbbf24') => {
+    gsap.to(element, {
+      boxShadow: `0 0 30px ${color}, 0 0 60px ${color}`,
+      duration: 0.5,
+      yoyo: true,
+      repeat: 3,
+      ease: 'power2.inOut'
+    })
+  }
+
+  /**
+   * Animation de distribution de cartes
+   */
+  const dealCards = (cardElements: HTMLElement[], delay: number = 0.1) => {
+    cardElements.forEach((card, index) => {
+      gsap.fromTo(card,
+        {
+          opacity: 0,
+          scale: 0,
+          rotation: Math.random() * 360,
+          x: 0,
+          y: -200
+        },
+        {
+          opacity: 1,
+          scale: 1,
+          rotation: 0,
+          x: 0,
+          y: 0,
+          duration: 0.6,
+          delay: index * delay,
+          ease: 'back.out(1.7)'
+        }
+      )
+    })
+  }
+
+  /**
+   * Animation d'élimination de joueur
+   */
+  const eliminatePlayer = (playerElement: HTMLElement) => {
+    const timeline = gsap.timeline()
+
+    timeline
+      .to(playerElement, {
+        scale: 1.1,
+        duration: 0.2
+      })
+      .to(playerElement, {
+        scale: 0.8,
+        opacity: 0.5,
+        filter: 'grayscale(1)',
+        duration: 0.5,
+        ease: 'power2.out'
+      })
+
+    return timeline
+  }
+
+  /**
+   * Animation de début de tour
+   */
+  const startTurnAnimation = (playerElement: HTMLElement) => {
+    gsap.fromTo(playerElement,
+      {
+        scale: 1
+      },
+      {
+        scale: 1.05,
+        duration: 0.3,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power2.inOut'
+      }
+    )
+  }
+
   return {
-    animateCardDeal,
     animateCoinTransfer,
-    animateBluffSuccess,
-    animateBluffFailed,
-    animateCardFlip,
-    animateCardElimination,
-    animateAttack,
-    animateModalShow,
-    animateModalHide,
-    animateTurnChange,
-    animateVictory,
-    animatePulse
+    celebrateVictory,
+    revealCard,
+    shakeElement,
+    pulseElement,
+    dealCards,
+    eliminatePlayer,
+    startTurnAnimation
   }
 }

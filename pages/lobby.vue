@@ -85,11 +85,22 @@
             </div>
           </div>
 
-          <!-- Aucune partie -->
+          <!-- Empty state -->
           <div v-else class="glass-panel p-12 text-center">
-            <Icon name="lucide:search-x" class="w-16 h-16 text-royal-600 mx-auto mb-4" />
-            <p class="text-royal-400 text-lg mb-4">Aucune partie disponible pour le moment</p>
-            <p class="text-royal-500 text-sm">Créez la première partie !</p>
+            <Icon name="lucide:inbox" class="w-16 h-16 text-royal-600 mx-auto mb-4" />
+            <h3 class="font-medieval text-xl text-royal-200 mb-2">
+              Aucune partie disponible
+            </h3>
+            <p class="text-royal-300 mb-6">
+              Soyez le premier à créer une partie et invitez vos amis !
+            </p>
+            <button
+              @click="scrollToCreate"
+              class="btn-primary inline-flex items-center gap-2"
+            >
+              <Icon name="lucide:plus" class="w-5 h-5" />
+              Créer une partie
+            </button>
           </div>
         </div>
 
@@ -273,6 +284,14 @@ const joinGame = async (code: string) => {
 const joinGameWithCode = () => {
   if (joinCode.value.length === 6) {
     joinGame(joinCode.value)
+  }
+}
+
+// Scroll vers le formulaire de création
+const scrollToCreate = () => {
+  const createSection = document.querySelector('.glass-panel')
+  if (createSection) {
+    createSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
 

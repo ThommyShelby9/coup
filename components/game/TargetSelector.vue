@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="glass-panel p-6 max-w-md w-full">
+  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 target-modal-backdrop">
+    <div class="glass-panel p-4 sm:p-6 max-w-sm sm:max-w-md w-full target-modal-content">
       <h3 class="font-medieval text-2xl text-gold-400 mb-2 text-center">
         {{ title }}
       </h3>
@@ -119,3 +119,66 @@ const cancel = () => {
   emit('cancel')
 }
 </script>
+
+<style scoped>
+.target-modal-backdrop {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.target-modal-content {
+  animation: slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+button:hover {
+  transform: translateX(4px);
+}
+
+button:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+/* Effet de ripple au clic */
+button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+button:active::after {
+  width: 300px;
+  height: 300px;
+}
+</style>

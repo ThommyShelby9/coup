@@ -67,19 +67,21 @@ const removeToast = (id: number) => {
   backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
-  animation: toast-glow 2s ease-in-out infinite;
+  /* animation: toast-glow 2s ease-in-out infinite; */ /* DÉSACTIVÉ */
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.4); /* Style statique */
 }
 
-@keyframes toast-glow {
+/* @keyframes toast-glow {
   0%, 100% {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
   50% {
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
   }
-}
+} */
 
-.glass-panel::before {
+/* Animation toast-shine DÉSACTIVÉE - causait des layout shifts */
+/* .glass-panel::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -93,16 +95,16 @@ const removeToast = (id: number) => {
     transparent 70%
   );
   animation: toast-shine 3s ease-in-out infinite;
-}
+} */
 
-@keyframes toast-shine {
+/* @keyframes toast-shine {
   0% {
     transform: translateX(-100%) translateY(-100%) rotate(45deg);
   }
   100% {
     transform: translateX(100%) translateY(100%) rotate(45deg);
   }
-}
+} */
 
 /* Types de toasts avec glow spécifique */
 .border-blue-500 {

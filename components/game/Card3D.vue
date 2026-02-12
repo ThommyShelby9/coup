@@ -2,7 +2,12 @@
   <div
     class="card-3d"
     :class="{ 'card-interactive': interactive, 'card-selected': selected }"
+    :role="interactive ? 'button' : undefined"
+    :aria-label="ariaLabel"
+    :tabindex="interactive ? 0 : -1"
     @click="handleClick"
+    @keydown.enter="handleClick"
+    @keydown.space.prevent="handleClick"
   >
     <div class="card-inner" :class="{ 'card-flipped': flipped }">
       <!-- Front -->
@@ -62,26 +67,19 @@ const emit = defineEmits<{
   click: [card: Card]
 }>()
 
-const roleIcon = computed(() => {
-  const icons: Record<string, string> = {
-    Duke: 'lucide:crown',
-    Assassin: 'lucide:zap',
-    Captain: 'lucide:anchor',
-    Ambassador: 'lucide:globe',
-    Contessa: 'lucide:shield'
-  }
-  return icons[props.card.type] || 'lucide:circle'
-})
+// Utiliser le composable centralisé pour les données des rôles
+const { getRoleIcon, getRoleAbilities } = useRoleData()
 
-const abilities = computed(() => {
-  const abilities: Record<string, string[]> = {
-    Duke: ['Taxe: +3 pièces', 'Bloque: Aide étrangère'],
-    Assassin: ['Assassine (3 pièces)'],
-    Captain: ['Vole 2 pièces', 'Bloque: Vol'],
-    Ambassador: ['Échange cartes', 'Bloque: Vol'],
-    Contessa: ['Bloque: Assassinat']
+const roleIcon = computed(() => getRoleIcon(props.card.type))
+const abilities = computed(() => getRoleAbilities(props.card.type))
+
+// ARIA label pour l'accessibilité
+const ariaLabel = computed(() => {
+  if (props.flipped) {
+    return 'Carte face cachée'
   }
-  return abilities[props.card.type] || []
+  const abilitiesText = abilities.value.join(', ')
+  return `Carte ${props.card.type} - Capacités: ${abilitiesText}`
 })
 
 const handleClick = () => {
@@ -107,6 +105,7 @@ const handleClick = () => {
 .card-interactive:hover .card-inner {
   transform: rotateY(10deg) rotateX(-8deg) translateZ(30px) scale(1.05);
   filter: brightness(1.2);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .card-interactive:hover .card-front {
@@ -114,11 +113,33 @@ const handleClick = () => {
     0 20px 60px rgba(251, 191, 36, 0.4),
     0 0 40px rgba(251, 191, 36, 0.3),
     inset 0 0 20px rgba(251, 191, 36, 0.1);
+  animation: card-hover-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes card-hover-glow {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.1);
+  }
 }
 
 .card-selected .card-inner {
   transform: scale(1.1) translateY(-10px);
-  animation: card-glow 2s ease-in-out infinite;
+  box-shadow:
+    0 0 30px rgba(251, 191, 36, 0.65),
+    0 0 50px rgba(251, 191, 36, 0.4);
+  animation: card-selected-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes card-selected-pulse {
+  0%, 100% {
+    transform: scale(1.1) translateY(-10px);
+  }
+  50% {
+    transform: scale(1.12) translateY(-12px);
+  }
 }
 
 @keyframes card-glow {
@@ -168,7 +189,8 @@ const handleClick = () => {
   overflow: visible;
 }
 
-.card-front::before {
+/* Animation card-shine DÉSACTIVÉE - causait layout shifts */
+/* .card-front::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -183,7 +205,7 @@ const handleClick = () => {
   );
   animation: card-shine 3s ease-in-out infinite;
   pointer-events: none;
-}
+} */
 
 @keyframes card-shine {
   0% {
@@ -209,7 +231,8 @@ const handleClick = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: pattern-pulse 2s ease-in-out infinite;
+  /* animation: pattern-pulse 2s ease-in-out infinite; */ /* DÉSACTIVÉ */
+  opacity: 0.4;
 }
 
 @keyframes pattern-pulse {

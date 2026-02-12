@@ -1,5 +1,6 @@
 import { Game } from '~/server/models/Game'
 import { User } from '~/server/models/User'
+import { BotMetadata } from '~/server/models/BotMetadata'
 import { BotPlayer } from '~/server/ai/BotPlayer'
 import type { BotDifficulty, BotPersonality, GameState } from '~/types/bot'
 import type { Player } from '~/types'
@@ -185,9 +186,24 @@ export class BotService {
     }
 
     // Récupérer les métadonnées du bot
-    const metadata = await this.getBotMetadata(botId)
+    let metadata = await this.getBotMetadata(botId)
+
+    // Si les métadonnées n'existent pas (hot reload), les recréer avec des valeurs par défaut
     if (!metadata) {
-      throw new Error('Métadonnées du bot non trouvées')
+      console.log(`⚠️ Métadonnées du bot ${botPlayer.username} perdues (hot reload). Recréation...`)
+
+      // Déterminer la difficulté depuis le nom du bot
+      const difficulty = this.detectBotDifficulty(botPlayer.username)
+      const personality = this.randomPersonality()
+
+      metadata = {
+        difficulty,
+        personality,
+        gameId: game._id.toString()
+      }
+
+      // Stocker les métadonnées recréées
+      await this.storeBotMetadata(botId, metadata)
     }
 
     // Créer l'instance BotPlayer
@@ -230,8 +246,20 @@ export class BotService {
     const game = await Game.findById(gameId)
     if (!game) return false
 
-    const metadata = await this.getBotMetadata(botId)
-    if (!metadata) return false
+    let metadata = await this.getBotMetadata(botId)
+
+    // Recréer les métadonnées si perdues
+    if (!metadata) {
+      const botPlayer = game.players.find(p => p.userId.toString() === botId)
+      if (!botPlayer) return false
+
+      metadata = {
+        difficulty: this.detectBotDifficulty(botPlayer.username),
+        personality: this.randomPersonality(),
+        gameId: game._id.toString()
+      }
+      await this.storeBotMetadata(botId, metadata)
+    }
 
     const bot = new BotPlayer(metadata.difficulty, metadata.personality)
     const gameState = this.buildGameState(game, botId)
@@ -254,8 +282,20 @@ export class BotService {
     const game = await Game.findById(gameId)
     if (!game) return { shouldBlock: false }
 
-    const metadata = await this.getBotMetadata(botId)
-    if (!metadata) return { shouldBlock: false }
+    let metadata = await this.getBotMetadata(botId)
+
+    // Recréer les métadonnées si perdues
+    if (!metadata) {
+      const botPlayer = game.players.find(p => p.userId.toString() === botId)
+      if (!botPlayer) return { shouldBlock: false }
+
+      metadata = {
+        difficulty: this.detectBotDifficulty(botPlayer.username),
+        personality: this.randomPersonality(),
+        gameId: game._id.toString()
+      }
+      await this.storeBotMetadata(botId, metadata)
+    }
 
     const bot = new BotPlayer(metadata.difficulty, metadata.personality)
     const gameState = this.buildGameState(game, botId)
@@ -275,6 +315,15 @@ export class BotService {
   private static randomPersonality(): BotPersonality {
     const personalities: BotPersonality[] = ['aggressive', 'defensive', 'balanced', 'bluffer']
     return personalities[Math.floor(Math.random() * personalities.length)]
+  }
+
+  /**
+   * Détecte la difficulté d'un bot depuis son nom (fallback en cas de perte de métadonnées)
+   */
+  private static detectBotDifficulty(botName: string): BotDifficulty {
+    // Par défaut, tous les bots sont en medium
+    // Dans le futur, on pourrait stocker la difficulté dans la DB
+    return 'medium'
   }
 
   private static getBotAvatar(difficulty: BotDifficulty): string {
@@ -317,19 +366,81 @@ export class BotService {
   }
 
   /**
-   * Stocke les métadonnées d'un bot (en mémoire pour simplifier)
+   * Stocke les métadonnées d'un bot dans MongoDB
    */
-  private static botMetadata = new Map<string, any>()
+  private static async storeBotMetadata(botId: string, metadata: {
+    difficulty: BotDifficulty
+    personality: BotPersonality
+    gameId: string
+  }) {
+    try {
+      // Utiliser upsert pour créer ou mettre à jour
+      await BotMetadata.findOneAndUpdate(
+        { botId: new Types.ObjectId(botId) },
+        {
+          botId: new Types.ObjectId(botId),
+          gameId: new Types.ObjectId(metadata.gameId),
+          difficulty: metadata.difficulty,
+          personality: metadata.personality
+        },
+        {
+          upsert: true, // Créer si n'existe pas
+          new: true // Retourner le document mis à jour
+        }
+      )
 
-  private static async storeBotMetadata(botId: string, metadata: any) {
-    this.botMetadata.set(botId, metadata)
+      console.log(`✅ Métadonnées du bot ${botId} stockées dans MongoDB`)
+    } catch (error) {
+      console.error('❌ Erreur lors du stockage des métadonnées du bot:', error)
+      throw error
+    }
   }
 
   private static async getBotMetadata(botId: string) {
-    return this.botMetadata.get(botId)
+    try {
+      const metadata = await BotMetadata.findOne({
+        botId: new Types.ObjectId(botId)
+      })
+
+      if (!metadata) {
+        return null
+      }
+
+      return {
+        difficulty: metadata.difficulty,
+        personality: metadata.personality,
+        gameId: metadata.gameId.toString()
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération des métadonnées du bot:', error)
+      return null
+    }
   }
 
   private static async deleteBotMetadata(botId: string) {
-    this.botMetadata.delete(botId)
+    try {
+      await BotMetadata.deleteOne({
+        botId: new Types.ObjectId(botId)
+      })
+
+      console.log(`🗑️ Métadonnées du bot ${botId} supprimées de MongoDB`)
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression des métadonnées du bot:', error)
+    }
+  }
+
+  /**
+   * Nettoie les métadonnées des bots des parties terminées (plus de 7 jours)
+   * À appeler périodiquement via un cron job
+   */
+  static async cleanupOldBotMetadata() {
+    try {
+      const count = await BotMetadata.cleanupOldMetadata(7)
+      console.log(`🧹 ${count} métadonnées de bots obsolètes nettoyées`)
+      return count
+    } catch (error) {
+      console.error('❌ Erreur lors du nettoyage des métadonnées:', error)
+      return 0
+    }
   }
 }

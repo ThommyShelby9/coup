@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import type { Game, Player, Action, GameSettings, Card } from '~/types'
+import type { Game, Player, Action, GameSettings, Card, AvailableGame } from '~/types'
 
 interface GameState {
   currentGame: Game | null
-  availableGames: any[]
+  availableGames: AvailableGame[]
   isLoading: boolean
 }
 
@@ -77,7 +77,7 @@ export const useGameStore = defineStore('game', {
           body: settings
         })
 
-        this.currentGame = response.game as any
+        this.currentGame = response.game
 
         return response.game
       } catch (error) {
@@ -127,7 +127,7 @@ export const useGameStore = defineStore('game', {
           body: { code }
         })
 
-        this.currentGame = response.game as any
+        this.currentGame = response.game
 
         return response.game
       } catch (error) {

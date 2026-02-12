@@ -1,0 +1,10 @@
+PWA Icon Placeholder (192x192)
+
+Remplacez ce fichier par une vraie image PNG de 192x192 pixels.
+
+Utilisez l'une des méthodes suivantes :
+1. https://realfavicongenerator.net/ (Recommandé)
+2. ImageMagick: magick icon.svg -resize 192x192 icon-192x192.png
+3. PWA Asset Generator: npx pwa-asset-generator icon.svg public/
+
+Design recommandé : Couronne dorée (#fbbf24) sur fond royal (#0f172a)

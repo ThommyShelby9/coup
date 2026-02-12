@@ -116,3 +116,30 @@ export interface Position {
   y: number
   z?: number
 }
+
+/**
+ * Interface pour les parties disponibles dans le lobby
+ * Version simplifiée de Game pour la liste
+ */
+export interface AvailableGame {
+  _id: string
+  code: string
+  hostId: string
+  players: Player[]
+  currentPlayer: number
+  phase: GamePhase
+  settings: GameSettings
+  updatedAt: Date
+}
+
+/**
+ * Interface pour les messages de chat
+ */
+export interface ChatMessage {
+  id: string
+  userId: string
+  username: string
+  message: string
+  timestamp: Date
+  type: 'message' | 'system'
+}

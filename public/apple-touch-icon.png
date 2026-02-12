@@ -1,0 +1,10 @@
+PWA Icon Placeholder (180x180)
+
+Remplacez ce fichier par une vraie image PNG de 180x180 pixels.
+
+Utilisez l'une des méthodes suivantes :
+1. https://realfavicongenerator.net/ (Recommandé)
+2. ImageMagick: magick icon.svg -resize 180x180 apple-touch-icon.png
+3. PWA Asset Generator: npx pwa-asset-generator icon.svg public/
+
+Design recommandé : Couronne dorée (#fbbf24) sur fond royal (#0f172a)

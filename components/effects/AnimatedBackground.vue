@@ -1,12 +1,12 @@
 <template>
   <div class="animated-background">
-    <!-- Gradient animé -->
-    <div class="gradient-orb orb-1"></div>
+    <!-- Gradient animé - DÉSACTIVÉ temporairement pour performances -->
+    <!-- <div class="gradient-orb orb-1"></div>
     <div class="gradient-orb orb-2"></div>
-    <div class="gradient-orb orb-3"></div>
+    <div class="gradient-orb orb-3"></div> -->
 
-    <!-- Particules flottantes (générées côté client uniquement) -->
-    <div v-if="mounted" class="floating-particles">
+    <!-- Particules flottantes - DÉSACTIVÉES temporairement pour performances -->
+    <!-- <div v-if="mounted" class="floating-particles">
       <div
         v-for="particle in particles"
         :key="particle.id"
@@ -15,7 +15,7 @@
       >
         <Icon name="lucide:sparkles" class="w-2 h-2 text-gold-400/30" />
       </div>
-    </div>
+    </div> -->
 
     <!-- Grille hexagonale subtile -->
     <div class="hex-grid"></div>
@@ -33,7 +33,7 @@ interface Particle {
 
 const mounted = ref(false)
 const particles = ref<Particle[]>([])
-const particleCount = 30
+const particleCount = 20 // Réduit de 30 à 20 pour meilleures performances
 
 onMounted(() => {
   // Générer les particules uniquement côté client
@@ -73,9 +73,13 @@ onMounted(() => {
 .gradient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.3;
+  filter: blur(60px); /* Réduit de 80px à 60px pour meilleures performances */
+  opacity: 0.2; /* Réduit l'opacité pour effet plus subtil */
   animation: float 20s ease-in-out infinite;
+  will-change: transform; /* Optimisation GPU */
+  /* Force composition layer pour éviter layout shift */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .orb-1 {
@@ -110,13 +114,13 @@ onMounted(() => {
 
 @keyframes float {
   0%, 100% {
-    transform: translate(0, 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   33% {
-    transform: translate(100px, -100px) scale(1.1);
+    transform: translate3d(50px, -50px, 0) scale(1.05);
   }
   66% {
-    transform: translate(-50px, 50px) scale(0.9);
+    transform: translate3d(-30px, 30px, 0) scale(0.95);
   }
 }
 
@@ -124,26 +128,29 @@ onMounted(() => {
 .floating-particles {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 .floating-particle {
   position: absolute;
   animation: particle-float linear infinite;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 @keyframes particle-float {
   0% {
-    transform: translateY(0) translateX(0) rotate(0deg);
+    transform: translate3d(0, 0, 0) rotate(0deg);
     opacity: 0;
   }
   10% {
-    opacity: 1;
+    opacity: 0.6;
   }
   90% {
-    opacity: 1;
+    opacity: 0.6;
   }
   100% {
-    transform: translateY(-100vh) translateX(100px) rotate(360deg);
+    transform: translate3d(50px, -100vh, 0) rotate(360deg);
     opacity: 0;
   }
 }

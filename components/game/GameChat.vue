@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-panel w-80 flex flex-col h-96">
+  <div class="glass-panel w-full sm:w-80 flex flex-col h-64 sm:h-80 md:h-96">
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-royal-700">
       <h3 class="font-medieval text-lg text-gold-400 flex items-center gap-2">
@@ -20,7 +20,7 @@
         <div
           v-for="(message, index) in messages"
           :key="index"
-          class="text-sm"
+          class="text-sm chat-message"
         >
           <div class="flex items-start gap-2">
             <div class="w-6 h-6 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center flex-shrink-0">
@@ -118,3 +118,50 @@ watch(() => props.messages.length, () => {
   })
 })
 </script>
+
+<style scoped>
+.chat-message {
+  animation: message-slide-in 0.3s ease-out;
+  transform-origin: left center;
+}
+
+@keyframes message-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.glass-panel {
+  transition: all 0.3s ease;
+}
+
+.glass-panel:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+input {
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+}
+
+button[type="submit"] {
+  transition: all 0.2s ease;
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  transform: scale(1.05) rotate(-5deg);
+}
+
+button[type="submit"]:active:not(:disabled) {
+  transform: scale(0.95);
+}
+</style>
