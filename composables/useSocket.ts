@@ -8,10 +8,10 @@ export const useSocket = () => {
   const connect = () => {
     if (socket.value?.connected) return
 
-    // Se connecter au serveur Socket.io (port 3001)
+    // Se connecter au serveur Socket.io (meme origine que Nuxt)
     const socketUrl = typeof window !== 'undefined'
-      ? `${window.location.protocol}//${window.location.hostname}:3001`
-      : 'http://localhost:3001'
+      ? window.location.origin
+      : 'http://localhost:3000'
 
     socket.value = io(socketUrl, {
       transports: ['polling', 'websocket'],

@@ -172,10 +172,10 @@ class SocketService {
         }
       }
 
-      // Connect to Socket.IO standalone server on port 3001
+      // Connect to Socket.IO on same origin (integrated into Nuxt server)
       const socketUrl = typeof window !== 'undefined'
-        ? `${window.location.protocol}//${window.location.hostname}:3001`
-        : 'http://localhost:3001'
+        ? window.location.origin
+        : 'http://localhost:3000'
 
       console.log(`🔌 [SOCKET-CLIENT] Connecting to ${socketUrl}`)
 

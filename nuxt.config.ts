@@ -51,6 +51,10 @@ export default defineNuxtConfig({
     plugins: ['~/server/plugins/socket.ts'],
     experimental: {
       websocket: true
+    },
+    // Socket.IO et ses deps doivent rester en node_modules (pas bundleable)
+    externals: {
+      external: ['socket.io', 'engine.io', 'ws', 'jsonwebtoken']
     }
   },
 
