@@ -9,9 +9,12 @@
     @keydown.enter="handleClick"
     @keydown.space.prevent="handleClick"
   >
-    <div class="card-inner" :class="{ 'card-flipped': flipped }">
+    <div
+      class="card-inner"
+      :style="{ transform: `scaleX(${flipScale})` }"
+    >
       <!-- Front -->
-      <div class="card-face card-front">
+      <div v-if="!displayBack" class="card-face card-front">
         <div class="card-border">
           <div class="card-header">
             <h3 class="font-medieval text-xl text-gold-400">{{ card.type }}</h3>
@@ -38,7 +41,7 @@
       </div>
 
       <!-- Back -->
-      <div class="card-face card-back">
+      <div v-else class="card-face card-back">
         <div class="card-back-pattern">
           <Icon name="lucide:crown" class="w-24 h-24 text-gold-400 opacity-30" />
         </div>
@@ -67,13 +70,31 @@ const emit = defineEmits<{
   click: [card: Card]
 }>()
 
-// Utiliser le composable centralisé pour les données des rôles
 const { getRoleIcon, getRoleAbilities } = useRoleData()
 
 const roleIcon = computed(() => getRoleIcon(props.card.type))
 const abilities = computed(() => getRoleAbilities(props.card.type))
 
-// ARIA label pour l'accessibilité
+// Flip 2D : scaleX(1) → scaleX(0) → switch face → scaleX(1)
+const displayBack = ref(props.flipped)
+const flipScale = ref(1)
+let flipTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(() => props.flipped, (newVal) => {
+  if (flipTimeout) clearTimeout(flipTimeout)
+
+  // Phase 1 : rétrécir à 0
+  flipScale.value = 0
+
+  // Phase 2 : à mi-chemin, changer la face affichée puis agrandir
+  flipTimeout = setTimeout(() => {
+    displayBack.value = newVal
+    nextTick(() => {
+      flipScale.value = 1
+    })
+  }, 200)
+})
+
 const ariaLabel = computed(() => {
   if (props.flipped) {
     return 'Carte face cachée'
@@ -102,9 +123,7 @@ const handleClick = () => {
 }
 
 .card-interactive:hover .card-inner {
-  transform: perspective(800px) rotateY(10deg) rotateX(-8deg) translateZ(30px) scale(1.05);
   filter: brightness(1.2);
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .card-interactive:hover .card-front {
@@ -112,20 +131,10 @@ const handleClick = () => {
     0 20px 60px rgba(251, 191, 36, 0.4),
     0 0 40px rgba(251, 191, 36, 0.3),
     inset 0 0 20px rgba(251, 191, 36, 0.1);
-  animation: card-hover-glow 1.5s ease-in-out infinite;
-}
-
-@keyframes card-hover-glow {
-  0%, 100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.1);
-  }
 }
 
 .card-selected .card-inner {
-  transform: perspective(800px) scale(1.1) translateY(-10px);
+  transform: scale(1.1) translateY(-10px) !important;
   box-shadow:
     0 0 30px rgba(251, 191, 36, 0.65),
     0 0 50px rgba(251, 191, 36, 0.4);
@@ -134,44 +143,22 @@ const handleClick = () => {
 
 @keyframes card-selected-pulse {
   0%, 100% {
-    transform: perspective(800px) scale(1.1) translateY(-10px);
+    transform: scale(1.1) translateY(-10px);
   }
   50% {
-    transform: perspective(800px) scale(1.12) translateY(-12px);
-  }
-}
-
-@keyframes card-glow {
-  0%, 100% {
-    box-shadow:
-      0 0 20px rgba(251, 191, 36, 0.5),
-      0 0 40px rgba(251, 191, 36, 0.3);
-  }
-  50% {
-    box-shadow:
-      0 0 40px rgba(251, 191, 36, 0.8),
-      0 0 60px rgba(251, 191, 36, 0.5);
+    transform: scale(1.12) translateY(-12px);
   }
 }
 
 .card-inner {
-  position: relative;
   width: 100%;
   height: 100%;
-  transform-style: preserve-3d;
-  transform: perspective(800px) rotateY(0deg);
-  transition: transform 0.6s ease;
-}
-
-.card-flipped {
-  transform: perspective(800px) rotateY(180deg);
+  transition: transform 0.2s ease;
 }
 
 .card-face {
-  position: absolute;
   width: 100%;
   height: 100%;
-  backface-visibility: hidden;
   border-radius: 12px;
   overflow: hidden;
   box-shadow:
@@ -184,42 +171,12 @@ const handleClick = () => {
     linear-gradient(135deg, rgba(251, 191, 36, 0.05), transparent 60%),
     linear-gradient(135deg, #1e293b, #334155);
   border: 2px solid #fbbf24;
-  position: relative;
-  overflow: visible;
-}
-
-/* Animation card-shine DÉSACTIVÉE - causait layout shifts */
-/* .card-front::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent 30%,
-    rgba(251, 191, 36, 0.1) 50%,
-    transparent 70%
-  );
-  animation: card-shine 3s ease-in-out infinite;
-  pointer-events: none;
-} */
-
-@keyframes card-shine {
-  0% {
-    transform: translateX(-100%) translateY(-100%) rotate(45deg);
-  }
-  100% {
-    transform: translateX(100%) translateY(100%) rotate(45deg);
-  }
 }
 
 .card-back {
   background:
     radial-gradient(circle at 30% 30%, rgba(251, 191, 36, 0.2), transparent 50%),
     linear-gradient(135deg, #7c2d12, #9a3412);
-  transform: rotateY(180deg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,19 +187,7 @@ const handleClick = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* animation: pattern-pulse 2s ease-in-out infinite; */ /* DÉSACTIVÉ */
   opacity: 0.4;
-}
-
-@keyframes pattern-pulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.1);
-  }
 }
 
 .card-border {
@@ -250,8 +195,6 @@ const handleClick = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  position: relative;
-  z-index: 1;
 }
 
 .card-header {
@@ -269,17 +212,14 @@ const handleClick = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .role-icon {
   opacity: 0.3;
-  transition: all 0.3s ease;
 }
 
 .card-interactive:hover .role-icon {
   opacity: 0.5;
-  transform: scale(1.1) rotate(5deg);
 }
 
 .card-abilities {
@@ -298,11 +238,9 @@ const handleClick = () => {
   gap: 6px;
   font-size: 0.75rem;
   color: #cbd5e1;
-  transition: all 0.2s ease;
 }
 
 .card-interactive:hover .ability-item {
   color: #fbbf24;
-  transform: translateX(2px);
 }
 </style>
