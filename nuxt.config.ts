@@ -189,7 +189,12 @@ export default defineNuxtConfig({
       headers: {
         'cache-control': 'no-store, no-cache, must-revalidate'
       }
-    }
+    },
+    // Ignorer les routes PWA/Service Worker
+    '/.well-known/**': { ssr: false },
+    '/dev-sw.js': { ssr: false },
+    '/sw.js': { ssr: false },
+    '/workbox-*.js': { ssr: false }
   },
 
   // Experimental features for better performance
